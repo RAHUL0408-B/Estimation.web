@@ -21,15 +21,15 @@ let db: Firestore | any;
 let storage: FirebaseStorage | any;
 let analytics: Analytics | undefined;
 
-if (typeof window !== "undefined" || firebaseConfig.apiKey) {
+if (typeof window !== "undefined") {
     try {
-        app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-        auth = getAuth(app);
-        db = getFirestore(app);
-        storage = getStorage(app);
+        if (firebaseConfig.apiKey) {
+            app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+            auth = getAuth(app);
+            db = getFirestore(app);
+            storage = getStorage(app);
 
-        // Set auth persistence to local storage (persists even after browser close)
-        if (typeof window !== "undefined") {
+            // Set auth persistence to local storage (persists even after browser close)
             setPersistence(auth, browserLocalPersistence).catch((error) => {
                 console.error("Error setting auth persistence:", error);
             });
