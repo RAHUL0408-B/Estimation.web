@@ -119,7 +119,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
         // Living area add-ons
         if (config.livingArea) {
             Object.entries(config.livingArea).forEach(([key, option]) => {
-                if (livingAreaSelections[key] && option.enabled) {
+                if (option && livingAreaSelections[key] && option.enabled) {
                     total += option.price;
                 }
             });
@@ -150,15 +150,15 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                 total += bedroomConfig.basePrice;
             }
 
-            if (hasMasterBedroom && config.bedrooms.masterBedroom.enabled) {
+            if (hasMasterBedroom && config.bedrooms.masterBedroom?.enabled) {
                 total += config.bedrooms.masterBedroom.additionalPrice;
             }
 
-            if (hasWardrobe && config.bedrooms.wardrobe.enabled) {
+            if (hasWardrobe && config.bedrooms.wardrobe?.enabled) {
                 total += config.bedrooms.wardrobe.pricePerBedroom * selectedBedroomCount;
             }
 
-            if (hasStudyUnit && config.bedrooms.studyUnit.enabled) {
+            if (hasStudyUnit && config.bedrooms.studyUnit?.enabled) {
                 total += config.bedrooms.studyUnit.pricePerUnit;
             }
         }
@@ -416,7 +416,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                     </Label>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                         {Object.entries(config.livingArea).map(([key, option]) => {
-                                            if (!option.enabled) return null;
+                                            if (!option || !option.enabled) return null;
                                             return (
                                                 <button
                                                     key={key}
@@ -437,7 +437,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                                             <Check className="h-5 w-5 text-blue-600" />
                                                         )}
                                                     </div>
-                                                    <span className="text-xs text-gray-500 mt-1">₹{option.price.toLocaleString()}</span>
+                                                    <span className="text-xs text-gray-500 mt-1">₹{option.price?.toLocaleString()}</span>
                                                 </button>
                                             );
                                         })}
@@ -559,7 +559,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
 
                                     {/* Bedroom Options */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        {config.bedrooms.masterBedroom.enabled && (
+                                        {config.bedrooms.masterBedroom?.enabled && (
                                             <button
                                                 type="button"
                                                 onClick={() => setHasMasterBedroom(!hasMasterBedroom)}
@@ -574,7 +574,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                                 {hasMasterBedroom && <Check className="h-4 w-4 text-blue-600" />}
                                             </button>
                                         )}
-                                        {config.bedrooms.wardrobe.enabled && (
+                                        {config.bedrooms.wardrobe?.enabled && (
                                             <button
                                                 type="button"
                                                 onClick={() => setHasWardrobe(!hasWardrobe)}
@@ -589,7 +589,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                                 {hasWardrobe && <Check className="h-4 w-4 text-blue-600" />}
                                             </button>
                                         )}
-                                        {config.bedrooms.studyUnit.enabled && (
+                                        {config.bedrooms.studyUnit?.enabled && (
                                             <button
                                                 type="button"
                                                 onClick={() => setHasStudyUnit(!hasStudyUnit)}

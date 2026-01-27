@@ -57,11 +57,7 @@ export interface PricingConfig {
 
     // New configuration sections (optional for backward compatibility)
     livingArea?: {
-        tvUnit: LivingAreaOption;
-        sofaUnit: LivingAreaOption;
-        showcase: LivingAreaOption;
-        wallPanel: LivingAreaOption;
-        falseCeiling: LivingAreaOption;
+        [key: string]: LivingAreaOption;
     };
 
     kitchen?: {
@@ -72,18 +68,7 @@ export interface PricingConfig {
 
     bedrooms?: {
         counts: BedroomCount[];
-        masterBedroom: {
-            enabled: boolean;
-            additionalPrice: number;
-        };
-        wardrobe: {
-            enabled: boolean;
-            pricePerBedroom: number;
-        };
-        studyUnit: {
-            enabled: boolean;
-            pricePerUnit: number;
-        };
+        [key: string]: any;
     };
 
     lastUpdated: any;

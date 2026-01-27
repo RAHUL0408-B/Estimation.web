@@ -1064,6 +1064,7 @@ export default function PricingPage() {
                                             size="icon"
                                             className="h-8 w-8 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600"
                                             onClick={() => {
+                                                if (!localConfig.bedrooms) return;
                                                 const newBedrooms = { ...localConfig.bedrooms };
                                                 delete newBedrooms.masterBedroom;
                                                 setLocalConfig({ ...localConfig, bedrooms: newBedrooms });
@@ -1126,6 +1127,7 @@ export default function PricingPage() {
                                             size="icon"
                                             className="h-8 w-8 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600"
                                             onClick={() => {
+                                                if (!localConfig.bedrooms) return;
                                                 const newBedrooms = { ...localConfig.bedrooms };
                                                 delete newBedrooms.wardrobe;
                                                 setLocalConfig({ ...localConfig, bedrooms: newBedrooms });
@@ -1188,6 +1190,7 @@ export default function PricingPage() {
                                             size="icon"
                                             className="h-8 w-8 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600"
                                             onClick={() => {
+                                                if (!localConfig.bedrooms) return;
                                                 const newBedrooms = { ...localConfig.bedrooms };
                                                 delete newBedrooms.studyUnit;
                                                 setLocalConfig({ ...localConfig, bedrooms: newBedrooms });
@@ -1205,7 +1208,7 @@ export default function PricingPage() {
                                             <Input
                                                 autoFocus
                                                 className="text-sm font-bold text-gray-700 w-48"
-                                                defaultValue={option.key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                defaultValue={option.key.replace(/([A-Z])/g, ' $1').replace(/^./, (str: string) => str.toUpperCase())}
                                                 onBlur={(e) => updateBedroomOptionName(option.key, e.target.value)}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') updateBedroomOptionName(option.key, e.currentTarget.value);
