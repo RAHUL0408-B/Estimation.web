@@ -25,6 +25,7 @@ interface EstimateData {
         };
         bedrooms: Array<{ items: { [itemId: string]: number } }>;
         bathrooms: Array<{ items: { [itemId: string]: number } }>;
+        cabins?: Array<{ items: { [itemId: string]: number } }>;
     };
     totalAmount: number;
     tenantId: string;
@@ -34,7 +35,7 @@ interface EstimateData {
 export async function generateEstimatePDF(
     estimateId: string,
     companyName: string = "Interior Design Co.",
-    options: { download?: boolean; uploadToStorage?: boolean } = { download: true, uploadToStorage: true }
+    options: { download?: boolean; uploadToStorage?: boolean; tenantId?: string } = { download: true, uploadToStorage: true }
 ): Promise<{ success: boolean; pdfUrl?: string }> {
     try {
         // Find estimate in tenant subcollection
@@ -44,17 +45,29 @@ export async function generateEstimatePDF(
         let estimateDocPath = "";
 
         // Try to find the estimate by searching all tenants
-        const tenantsRef = collection(db, "tenants");
-        const tenantsSnap = await getDocs(tenantsRef);
-
-        for (const tenantDoc of tenantsSnap.docs) {
-            const estimateRef = doc(db, `tenants/${tenantDoc.id}/estimates/${estimateId}`);
+        if (options.tenantId) {
+            const estimateRef = doc(db, `tenants/${options.tenantId}/estimates/${estimateId}`);
             const estimateSnap = await getDoc(estimateRef);
-
             if (estimateSnap.exists()) {
                 estimateData = estimateSnap.data() as EstimateData;
                 estimateDocPath = estimateRef.path;
-                break;
+            }
+        }
+
+        if (!estimateData) {
+            // Try secondary search by searching all tenants if not found or tenantId not provided
+            const tenantsRef = collection(db, "tenants");
+            const tenantsSnap = await getDocs(tenantsRef);
+
+            for (const tenantDoc of tenantsSnap.docs) {
+                const estimateRef = doc(db, `tenants/${tenantDoc.id}/estimates/${estimateId}`);
+                const estimateSnap = await getDoc(estimateRef);
+
+                if (estimateSnap.exists()) {
+                    estimateData = estimateSnap.data() as EstimateData;
+                    estimateDocPath = estimateRef.path;
+                    break;
+                }
             }
         }
 
@@ -105,10 +118,17 @@ export async function generateEstimatePDF(
         const projectDetails: any[] = [
             ['Segment', estimateData.segment],
             ['Plan Selected', estimateData.plan],
-            ['Carpet Area', `${estimateData.carpetArea} sqft`],
-            ['Bedrooms', estimateData.bedrooms.toString()],
-            ['Bathrooms', estimateData.bathrooms.toString()]
+            ['Carpet Area', `${estimateData.carpetArea} sqft`]
         ];
+
+        if (estimateData.segment === 'Residential') {
+            projectDetails.push(['Bedrooms', estimateData.bedrooms?.toString() || '0']);
+            projectDetails.push(['Bathrooms', estimateData.bathrooms?.toString() || '0']);
+        } else {
+            const cabinCount = estimateData.configuration.cabins?.length || 0;
+            projectDetails.push(['No. of Cabins', cabinCount.toString()]);
+            projectDetails.push(['Bathroom Units', estimateData.bathrooms?.toString() || '0']);
+        }
 
         if (estimateData.configuration.kitchen.layout) {
             projectDetails.push(['Kitchen Layout', estimateData.configuration.kitchen.layout]);
@@ -207,8 +227,23 @@ export async function generateEstimatePDF(
                 Object.entries(bathroom.items).forEach(([itemId, quantity]) => {
                     if (quantity > 0) {
                         itemBreakdown.push([
-                            `Bathroom ${index + 1}`,
-                            getItemName('bathroom', itemId),
+                            estimateData.segment === 'Commercial' ? `Bathroom Unit ${index + 1}` : `Bathroom ${index + 1}`,
+                            getItemName(estimateData.segment === 'Commercial' ? 'commercial_bathroom' : 'bathroom', itemId),
+                            quantity.toString()
+                        ]);
+                    }
+                });
+            });
+        }
+
+        // Cabin items
+        if (estimateData.configuration.cabins) {
+            estimateData.configuration.cabins.forEach((cabin, index) => {
+                Object.entries(cabin.items).forEach(([itemId, quantity]) => {
+                    if (quantity > 0) {
+                        itemBreakdown.push([
+                            `Cabin ${index + 1}`,
+                            getItemName('cabin', itemId),
                             quantity.toString()
                         ]);
                     }

@@ -3,40 +3,41 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, X } from "lucide-react";
+import ConsultationForm from "@/components/storefront/ConsultationForm";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { getTenantByStoreId, Tenant } from "@/lib/firestoreHelpers";
 
 export default function BookConsultationPage({ params }: { params: Promise<{ tenantId: string }> }) {
-    const { tenantId } = use(params);
-    const storeSlug = tenantId;
+    const { tenantId: storeSlug } = use(params);
 
     const router = useRouter();
     const { customer, loading: authLoading } = useCustomerAuth();
 
-    // Resolve store slug to actual tenant document ID
     const [resolvedTenant, setResolvedTenant] = useState<Tenant | null>(null);
     const [tenantLoading, setTenantLoading] = useState(true);
+    const [resolutionError, setResolutionError] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false); // Keep this state for success message
 
     useEffect(() => {
         let isMounted = true;
         const resolveTenant = async () => {
             if (!storeSlug) {
-                console.warn("No storeSlug provided.");
                 if (isMounted) setTenantLoading(false);
                 return;
             }
             try {
-                const tenant = await getTenantByStoreId(storeSlug);
-                if (isMounted) setResolvedTenant(tenant);
+                // Try lowercase first as it's the standard for storeIds
+                const tenant = await getTenantByStoreId(storeSlug.toLowerCase()) || await getTenantByStoreId(storeSlug);
+                if (tenant) {
+                    if (isMounted) setResolvedTenant(tenant);
+                } else {
+                    if (isMounted) setResolutionError(true);
+                }
             } catch (error) {
                 console.error("Error resolving tenant:", error);
+                if (isMounted) setResolutionError(true);
             } finally {
                 if (isMounted) setTenantLoading(false);
             }
@@ -46,75 +47,29 @@ export default function BookConsultationPage({ params }: { params: Promise<{ ten
         return () => { isMounted = false; };
     }, [storeSlug]);
 
-    const [name, setName] = useState("");
-    const [phone, setPhone] = useState("");
-    const [email, setEmail] = useState("");
-    const [requirement, setRequirement] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
-
-    // Pre-fill form if logged in
-    useEffect(() => {
-        if (customer) {
-            setName(customer.displayName || "");
-            setPhone(customer.phoneNumber || "");
-            setEmail(customer.email || "");
-        }
-    }, [customer]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!resolvedTenant?.id) {
-            alert("Unable to submit. Please try again.");
-            return;
-        }
-
-        setIsSubmitting(true);
-
-        try {
-            await addDoc(collection(db, "consultation_requests"), {
-                tenantId: resolvedTenant.id,
-                storeId: storeSlug,
-                clientName: name,
-                phone: phone,
-                email: email,
-                source: "website",
-                requirement: requirement,
-                status: "new",
-                createdAt: serverTimestamp(),
-                userId: customer?.uid || null
-            });
-
-            setIsSuccess(true);
-        } catch (error) {
-            console.error("Error submitting consultation:", error);
-            alert("Failed to submit request. Please try again.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
     if (authLoading || tenantLoading) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-muted-foreground">
-                    {authLoading ? "Authenticating..." : "Loading store details..."}
-                </p>
+                <p className="text-gray-500 font-medium">Loading...</p>
             </div>
         );
     }
 
-    if (!resolvedTenant) {
+    if (resolutionError || (!resolvedTenant && !tenantLoading)) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
-                <h2 className="text-xl font-bold text-destructive">Store Not Found</h2>
-                <p className="text-muted-foreground">
-                    We couldn't find the store you're looking for. Please check the URL and try again.
-                </p>
-                <Button onClick={() => router.push("/")} variant="outline">
-                    Go Home
+            <div className="flex flex-col items-center justify-center min-h-screen py-20 space-y-6 text-center px-4">
+                <div className="h-20 w-20 rounded-full bg-red-50 flex items-center justify-center">
+                    <X className="h-10 w-10 text-red-500" />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-3xl font-bold text-gray-900">Store Not Found</h2>
+                    <p className="text-gray-500 max-w-md mx-auto">
+                        We couldn't find the company profile you're looking for. Please check the URL and try again.
+                    </p>
+                </div>
+                <Button onClick={() => router.push("/")} variant="outline" className="rounded-xl px-8 h-12">
+                    Go Back Home
                 </Button>
             </div>
         );
@@ -122,23 +77,25 @@ export default function BookConsultationPage({ params }: { params: Promise<{ ten
 
     if (isSuccess) {
         return (
-            <div className="container mx-auto px-4 py-20 flex justify-center">
-                <Card className="max-w-md w-full text-center">
-                    <CardHeader>
-                        <div className="flex justify-center mb-4">
-                            <CheckCircle2 className="h-16 w-16 text-green-500" />
+            <div className="container mx-auto px-4 py-24 flex justify-center min-h-screen items-center">
+                <Card className="max-w-md w-full text-center border-none shadow-2xl rounded-[40px] overflow-hidden">
+                    <CardHeader className="pt-12">
+                        <div className="flex justify-center mb-6">
+                            <div className="h-24 w-24 rounded-full bg-green-50 flex items-center justify-center ring-8 ring-green-50/50">
+                                <CheckCircle2 className="h-12 w-12 text-green-500" />
+                            </div>
                         </div>
-                        <CardTitle className="text-2xl">Request Submitted!</CardTitle>
-                        <CardDescription>
-                            Thank you for your interest. Our design team will contact you shortly to schedule your consultation.
+                        <CardTitle className="text-3xl font-bold">Request Received!</CardTitle>
+                        <CardDescription className="text-lg pt-2 leading-relaxed">
+                            Thank you for reaching out. Our design experts will contact you within 24 hours to discuss your dream project.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pb-12 px-10">
                         <Button
                             onClick={() => router.push(`/${storeSlug}`)}
-                            className="w-full"
+                            className="w-full h-14 text-lg rounded-2xl bg-black hover:bg-black/90 text-white transition-all transform hover:scale-[1.02]"
                         >
-                            Back to Home
+                            Back to Website
                         </Button>
                     </CardContent>
                 </Card>
@@ -147,78 +104,57 @@ export default function BookConsultationPage({ params }: { params: Promise<{ ten
     }
 
     return (
-        <div className="container mx-auto px-4 py-12 max-w-2xl">
-            <h1 className="text-3xl font-serif font-bold text-center mb-8">Book a Design Consultation</h1>
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center py-20 px-4">
+            <div className="max-w-4xl w-full grid md:grid-cols-5 bg-white rounded-[40px] shadow-2xl overflow-hidden">
+                {/* Info Sidebar */}
+                <div className="md:col-span-2 bg-[#0F172A] p-10 text-white flex flex-col justify-between relative overflow-hidden">
+                    <div className="relative z-10 space-y-8">
+                        <div className="space-y-4">
+                            <h1 className="text-4xl font-bold leading-tight">Let's Create Your Dream Space</h1>
+                            <p className="text-gray-400 text-lg leading-relaxed">
+                                Book a complimentary design consultation with our experts and start your transformation journey.
+                            </p>
+                        </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Tell us about your project</CardTitle>
-                    <CardDescription>
-                        Fill out the form below and we'll get back to you to discuss your dream space.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Full Name</Label>
-                                <Input
-                                    id="name"
-                                    placeholder="Enter your name"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    required
-                                />
+                        <div className="space-y-6 pt-4">
+                            <div className="flex items-center gap-4 group">
+                                <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user h-6 w-6 text-blue-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400">Personal Advisor</p>
+                                    <p className="font-semibold italic font-serif">Dedicated Design Expert</p>
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Phone Number</Label>
-                                <Input
-                                    id="phone"
-                                    placeholder="Enter your mobile number"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    required
-                                />
+                            <div className="flex items-center gap-4 group">
+                                <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                                    <CheckCircle2 className="h-6 w-6 text-green-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400">The Outcome</p>
+                                    <p className="font-semibold italic font-serif">Custom Layout & Moodboard</p>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="Enter your email address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
-                        </div>
+                    {/* Decorative element */}
+                    <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl"></div>
+                </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="requirement">Requirement</Label>
-                            <Textarea
-                                id="requirement"
-                                placeholder="Describe your project (e.g., 3BHK interior, Kitchen renovation, etc.)"
-                                value={requirement}
-                                onChange={(e) => setRequirement(e.target.value)}
-                                required
-                                className="min-h-[120px]"
-                            />
-                        </div>
-
-                        <Button type="submit" className="w-full h-12 text-lg" disabled={isSubmitting}>
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Submitting...
-                                </>
-                            ) : (
-                                "Submit Request"
-                            )}
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
+                {/* Form Section */}
+                <div className="md:col-span-3 p-10 md:p-14">
+                    <ConsultationForm
+                        tenantId={resolvedTenant!.id}
+                        storeId={storeSlug}
+                        customer={customer}
+                        onSuccess={() => setIsSuccess(true)}
+                    />
+                    <p className="mt-8 text-center text-xs text-gray-400">
+                        By clicking, you agree to our contact terms and privacy policy.
+                    </p>
+                </div>
+            </div>
         </div>
     );
 }

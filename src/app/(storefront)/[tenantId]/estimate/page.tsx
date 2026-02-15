@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { usePricingConfig, PricingItem } from "@/hooks/usePricingConfig";
 import { useCities } from "@/hooks/useCities";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { usePublicWebsiteConfig } from "@/hooks/useWebsiteConfig";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { getTenantByStoreId, Tenant } from "@/lib/firestoreHelpers";
@@ -36,18 +37,24 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
     const router = useRouter();
 
 
-    // Resolve tenant
     const [resolvedTenant, setResolvedTenant] = useState<Tenant | null>(null);
     const [tenantLoading, setTenantLoading] = useState(true);
+    const [resolutionError, setResolutionError] = useState(false);
 
     useEffect(() => {
         const resolveTenant = async () => {
             if (!tenantSlug) return;
             try {
-                const tenant = await getTenantByStoreId(tenantSlug);
-                setResolvedTenant(tenant);
+                // Try lowercase first as it's the standard for storeIds
+                const tenant = await getTenantByStoreId(tenantSlug.toLowerCase()) || await getTenantByStoreId(tenantSlug);
+                if (tenant) {
+                    setResolvedTenant(tenant);
+                } else {
+                    setResolutionError(true);
+                }
             } catch (error) {
                 console.error("Error resolving tenant:", error);
+                setResolutionError(true);
             } finally {
                 setTenantLoading(false);
             }
@@ -55,11 +62,17 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
         resolveTenant();
     }, [tenantSlug]);
 
+    const { config: websiteConfig, loading: websiteLoading } = usePublicWebsiteConfig(tenantSlug);
     const { config, loading: pricingLoading } = usePricingConfig(resolvedTenant?.id || null);
     const { cities, loading: citiesLoading } = useCities(resolvedTenant?.id || null);
     const { customer, loading: authLoading, isAdmin } = useCustomerAuth();
 
-    const loading = tenantLoading || pricingLoading || citiesLoading;
+    const loading = tenantLoading || pricingLoading || citiesLoading || websiteLoading;
+
+    const primaryColor = websiteConfig?.primaryColor || "#0F172A";
+    const secondaryColor = websiteConfig?.secondaryColor || "#1E293B";
+    const buttonRadius = websiteConfig?.buttonRadius || 12;
+    const backgroundColor = websiteConfig?.backgroundColor || "#ffffff";
 
     // NOTE: Removed auth guard - guests can now access estimate page
     // Auth check moved to handleSubmit function
@@ -89,6 +102,10 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
     const [bedrooms, setBedrooms] = useState<BedroomConfig[]>([]);
     const [bathrooms, setBathrooms] = useState<BathroomConfig[]>([]);
 
+    // Commercial Specific Counts
+    const [cabinCount, setCabinCount] = useState(0);
+    const [cabins, setCabins] = useState<BedroomConfig[]>([]);
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [estimatedTotal, setEstimatedTotal] = useState(0);
     const [breakdown, setBreakdown] = useState<any[]>([]);
@@ -111,6 +128,27 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
             setBathrooms(prev => prev.slice(0, count));
         }
     }, [bathroomCount]);
+
+    useEffect(() => {
+        const count = Math.max(0, cabinCount);
+        if (count > cabins.length) {
+            setCabins(prev => [...prev, ...Array(count - prev.length).fill({ items: {} })]);
+        } else if (count < cabins.length) {
+            setCabins(prev => prev.slice(0, count));
+        }
+    }, [cabinCount]);
+
+    // Set default kitchen layout and material when config loads
+    useEffect(() => {
+        if (config?.kitchenLayouts?.length && !kitchenLayout) {
+            const firstEnabled = config.kitchenLayouts.find(l => l.enabled);
+            if (firstEnabled) setKitchenLayout(firstEnabled.name);
+        }
+        if (config?.kitchenMaterials?.length && !kitchenMaterial) {
+            const firstEnabled = config.kitchenMaterials.find(m => m.enabled);
+            if (firstEnabled) setKitchenMaterial(firstEnabled.name);
+        }
+    }, [config, kitchenLayout, kitchenMaterial]);
 
     // Scroll to top on step change
     useEffect(() => {
@@ -148,6 +186,10 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                         setKitchenItems(formData.configuration.kitchen.items);
                         setBedrooms(formData.configuration.bedrooms);
                         setBathrooms(formData.configuration.bathrooms);
+                        if (formData.configuration.cabins) {
+                            setCabins(formData.configuration.cabins);
+                            setCabinCount(formData.configuration.cabins.length);
+                        }
 
                         // Wait a moment for state to update, then submit
                         setTimeout(() => {
@@ -173,12 +215,12 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
         if (step === 2) return true;
         if (step === 3) return carpetArea && parseFloat(carpetArea) > 0;
         if (step === 4) return true;
-        if (step === 5) return customerName && customerPhone && customerEmail && selectedCity;
+        if (step === 5) return customerName && customerPhone.length >= 10 && customerEmail.includes('@') && selectedCity;
         return false;
     };
 
     const updateItemQuantity = (
-        category: 'livingArea' | 'kitchen' | 'bedroom' | 'bathroom',
+        category: 'livingArea' | 'kitchen' | 'bedroom' | 'bathroom' | 'cabin',
         itemId: string,
         delta: number,
         index?: number
@@ -217,6 +259,18 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                 };
                 return newBathrooms;
             });
+        } else if (category === 'cabin' && index !== undefined) {
+            setCabins(prev => {
+                const newCabins = [...prev];
+                newCabins[index] = {
+                    ...newCabins[index],
+                    items: {
+                        ...newCabins[index].items,
+                        [itemId]: Math.max(0, (newCabins[index].items[itemId] || 0) + delta)
+                    }
+                };
+                return newCabins;
+            });
         }
     };
 
@@ -241,60 +295,22 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
             return 0;
         };
 
-        // Living Area
-        const livingAreaCategory = config.categories.find(c => c.id === 'living_area');
-        if (livingAreaCategory) {
-            Object.entries(livingAreaItems).forEach(([itemId, quantity]) => {
-                if (quantity > 0) {
-                    const item = livingAreaCategory.items.find(i => i.id === itemId);
-                    if (item && item.enabled) {
-                        const cost = calculateItemCost(item, quantity);
-                        total += cost;
-                        breakdown.push({
-                            category: 'Living Area',
-                            item: item.name,
-                            quantity,
-                            unitPrice: item[priceKey],
-                            total: cost
-                        });
-                    }
-                }
-            });
-        }
+        // 1. Process All Categories for "General" items (stored in livingAreaItems for custom cats)
+        config.categories.forEach(category => {
+            const isKitchen = category.id === 'kitchen' || category.name.toLowerCase() === 'kitchen';
+            const isBedroom = category.id === 'bedroom' || category.name.toLowerCase() === 'bedroom';
+            const isBathroom = category.id === 'bathroom' || category.name.toLowerCase() === 'bathroom';
 
-        // Kitchen
-        const kitchenCategory = config.categories.find(c => c.id === 'kitchen');
-        if (kitchenCategory) {
-            Object.entries(kitchenItems).forEach(([itemId, quantity]) => {
-                if (quantity > 0) {
-                    const item = kitchenCategory.items.find(i => i.id === itemId);
-                    if (item && item.enabled) {
-                        const cost = calculateItemCost(item, quantity);
-                        total += cost;
-                        breakdown.push({
-                            category: 'Kitchen',
-                            item: item.name,
-                            quantity,
-                            unitPrice: item[priceKey],
-                            total: cost
-                        });
-                    }
-                }
-            });
-        }
-
-        // Bedrooms
-        const bedroomCategory = config.categories.find(c => c.id === 'bedroom');
-        if (bedroomCategory) {
-            bedrooms.forEach((bedroom, index) => {
-                Object.entries(bedroom.items).forEach(([itemId, quantity]) => {
+            if (!isKitchen && !isBedroom && !isBathroom) {
+                // Living Area + All Other Custom Categories
+                Object.entries(livingAreaItems).forEach(([itemId, quantity]) => {
                     if (quantity > 0) {
-                        const item = bedroomCategory.items.find(i => i.id === itemId);
+                        const item = category.items.find(i => i.id === itemId);
                         if (item && item.enabled) {
                             const cost = calculateItemCost(item, quantity);
                             total += cost;
                             breakdown.push({
-                                category: `Bedroom ${index + 1}`,
+                                category: category.name,
                                 item: item.name,
                                 quantity,
                                 unitPrice: item[priceKey],
@@ -303,21 +319,16 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                         }
                     }
                 });
-            });
-        }
-
-        // Bathrooms
-        const bathroomCategory = config.categories.find(c => c.id === 'bathroom');
-        if (bathroomCategory) {
-            bathrooms.forEach((bathroom, index) => {
-                Object.entries(bathroom.items).forEach(([itemId, quantity]) => {
+            } else if (isKitchen) {
+                // Kitchen items
+                Object.entries(kitchenItems).forEach(([itemId, quantity]) => {
                     if (quantity > 0) {
-                        const item = bathroomCategory.items.find(i => i.id === itemId);
+                        const item = category.items.find(i => i.id === itemId);
                         if (item && item.enabled) {
                             const cost = calculateItemCost(item, quantity);
                             total += cost;
                             breakdown.push({
-                                category: `Bathroom ${index + 1}`,
+                                category: category.name,
                                 item: item.name,
                                 quantity,
                                 unitPrice: item[priceKey],
@@ -326,8 +337,68 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                         }
                     }
                 });
-            });
-        }
+            } else if (isBedroom) {
+                // Bedroom items (mapped per room)
+                bedrooms.forEach((bedroom, index) => {
+                    Object.entries(bedroom.items).forEach(([itemId, quantity]) => {
+                        if (quantity > 0) {
+                            const item = category.items.find(i => i.id === itemId);
+                            if (item && item.enabled) {
+                                const cost = calculateItemCost(item, quantity);
+                                total += cost;
+                                breakdown.push({
+                                    category: `Bedroom ${index + 1}`,
+                                    item: item.name,
+                                    quantity,
+                                    unitPrice: item[priceKey],
+                                    total: cost
+                                });
+                            }
+                        }
+                    });
+                });
+            } else if (isBathroom) {
+                // Bathroom items (mapped per room)
+                bathrooms.forEach((bathroom, index) => {
+                    Object.entries(bathroom.items).forEach(([itemId, quantity]) => {
+                        if (quantity > 0) {
+                            const item = category.items.find(i => i.id === itemId);
+                            if (item && item.enabled) {
+                                const cost = calculateItemCost(item, quantity);
+                                total += cost;
+                                breakdown.push({
+                                    category: `Bathroom ${index + 1}`,
+                                    item: item.name,
+                                    quantity,
+                                    unitPrice: item[priceKey],
+                                    total: cost
+                                });
+                            }
+                        }
+                    });
+                });
+            } else if (category.id === 'cabin' || category.name.toLowerCase() === 'cabin') {
+                // Cabin items (mapped per room)
+                cabins.forEach((cabin, index) => {
+                    Object.entries(cabin.items).forEach(([itemId, quantity]) => {
+                        if (quantity > 0) {
+                            const item = category.items.find(i => i.id === itemId);
+                            if (item && item.enabled) {
+                                const cost = calculateItemCost(item, quantity);
+                                total += cost;
+                                breakdown.push({
+                                    category: `Cabin ${index + 1}`,
+                                    item: item.name,
+                                    quantity,
+                                    unitPrice: item[priceKey],
+                                    total: cost
+                                });
+                            }
+                        }
+                    });
+                });
+            }
+        });
 
         return { total, breakdown };
     };
@@ -366,7 +437,8 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                         items: kitchenItems
                     },
                     bedrooms: bedrooms,
-                    bathrooms: bathrooms
+                    bathrooms: bathrooms,
+                    cabins: cabins
                 },
                 tenantId: resolvedTenant?.id,
                 tenantSlug: tenantSlug
@@ -407,7 +479,8 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                         items: kitchenItems
                     },
                     bedrooms: bedrooms,
-                    bathrooms: bathrooms
+                    bathrooms: bathrooms,
+                    cabins: cabins
                 },
                 totalAmount: total,
                 tenantId: resolvedTenant?.id,
@@ -437,7 +510,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
         if (!currentEstimateId) return;
         setIsGeneratingPDF(true);
         try {
-            await generateEstimatePDF(currentEstimateId, resolvedTenant?.businessName || "Company");
+            await generateEstimatePDF(currentEstimateId, resolvedTenant?.businessName || "Company", { download: true, uploadToStorage: true, tenantId: resolvedTenant?.id });
         } catch (error) {
             console.error("Error generating PDF:", error);
             alert("Failed to generate PDF");
@@ -454,11 +527,31 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
         );
     }
 
+    if (resolutionError || (!resolvedTenant && !tenantLoading)) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <Card className="max-w-md w-full text-center p-8">
+                    <CardHeader>
+                        <CardTitle className="text-2xl font-bold">Store Not Found</CardTitle>
+                        <CardDescription>
+                            The estimate page you're trying to reach doesn't exist or the company ID is incorrect.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={() => router.push('/')} className="w-full">
+                            Go to Home
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     if (step === 6) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 flex items-center justify-center">
+            <div className="min-h-screen py-12 px-4 flex items-center justify-center transition-colors duration-500" style={{ backgroundColor: `${primaryColor}10` }}>
                 <div className="max-w-3xl w-full">
-                    <Card className="border-none shadow-2xl overflow-hidden rounded-3xl">
+                    <Card className="border-none shadow-2xl overflow-hidden rounded-3xl" style={{ borderRadius: buttonRadius }}>
                         <CardHeader className="text-center pb-8 pt-12 bg-white">
                             <div className="mx-auto mb-6 h-24 w-24 rounded-full bg-green-100 flex items-center justify-center ring-8 ring-green-50">
                                 <CheckCircle2 className="h-12 w-12 text-green-600" />
@@ -471,7 +564,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-8 pb-12 bg-gray-50/50 p-8">
-                            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-center text-white shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
+                            <div className="rounded-2xl p-8 text-center text-white shadow-lg transform hover:scale-[1.02] transition-all duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, borderRadius: buttonRadius }}>
                                 <p className="text-sm font-medium mb-2 opacity-90 uppercase tracking-widest">Total Project Cost</p>
                                 <p className="text-6xl font-bold tracking-tight">₹ {estimatedTotal.toLocaleString('en-IN')}</p>
                                 <p className="text-sm mt-3 opacity-80 font-medium bg-white/20 inline-block px-3 py-1 rounded-full">{selectedPlan} Plan</p>
@@ -513,7 +606,8 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                 <Button
                                     onClick={handleDownloadPDF}
                                     disabled={isGeneratingPDF}
-                                    className="flex-1 bg-[#0F172A] hover:bg-[#1E293B] text-white py-7 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all"
+                                    className="flex-1 text-white py-7 text-lg shadow-lg hover:shadow-xl transition-all"
+                                    style={{ backgroundColor: primaryColor, borderRadius: buttonRadius }}
                                 >
                                     {isGeneratingPDF ? (
                                         <>
@@ -528,16 +622,12 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                     )}
                                 </Button>
                                 <Button
-                                    onClick={() => {
-                                        setStep(1);
-                                        setCurrentEstimateId(null);
-                                        setEstimatedTotal(0);
-                                        setBreakdown([]);
-                                    }}
+                                    onClick={() => router.push(`/${tenantSlug}`)}
                                     variant="outline"
-                                    className="flex-1 py-7 text-lg rounded-xl border-2 hover:bg-gray-50 transition-all"
+                                    className="flex-1 py-7 text-lg border-2 hover:bg-gray-50 transition-all"
+                                    style={{ borderRadius: buttonRadius, borderColor: primaryColor, color: primaryColor }}
                                 >
-                                    Start New Estimate
+                                    Go Back Home
                                 </Button>
                             </div>
                         </CardContent>
@@ -547,17 +637,48 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
         );
     }
 
-    const livingAreaCategory = config?.categories?.find(c => c.id === 'living_area');
-    const kitchenCategory = config?.categories?.find(c => c.id === 'kitchen');
-    const bedroomCategory = config?.categories?.find(c => c.id === 'bedroom');
-    const bathroomCategory = config?.categories?.find(c => c.id === 'bathroom');
+    const allCategories = config?.categories || [];
+    const categories = allCategories.filter(c => {
+        if (segment === 'Residential') return !c.type || c.type === 'residential';
+        return c.type === 'commercial';
+    });
 
-    const enabledCities = cities.filter(c => c.enabled);
+    // Helper to match category names robustly
+    const isRoom = (cat: any, name: string) =>
+        cat.id === name ||
+        cat.id === name.replace(' ', '_') ||
+        cat.name.trim().toLowerCase() === name.replace('_', ' ').toLowerCase();
+
+    const livingAreaCategory = categories.find(c => isRoom(c, 'living_area'));
+    const kitchenCategory = categories.find(c => isRoom(c, 'kitchen'));
+    const bedroomCategory = categories.find(c => isRoom(c, 'bedroom'));
+    const bathroomCategory = categories.find(c => isRoom(c, 'bathroom'));
+
+    // Other categories to show in a general section
+    const otherCategories = categories.filter(c =>
+        !isRoom(c, 'living_area') &&
+        !isRoom(c, 'kitchen') &&
+        !isRoom(c, 'bedroom') &&
+        !isRoom(c, 'bathroom')
+    );
+
+    const enabledCities = cities.length > 0
+        ? cities.filter(c => c.enabled)
+        : [
+            { id: 'def-1', name: 'Mumbai', enabled: true },
+            { id: 'def-2', name: 'Delhi', enabled: true },
+            { id: 'def-3', name: 'Bangalore', enabled: true },
+            { id: 'def-4', name: 'Hyderabad', enabled: true },
+            { id: 'def-5', name: 'Ahmedabad', enabled: true },
+            { id: 'def-6', name: 'Chennai', enabled: true },
+            { id: 'def-7', name: 'Kolkata', enabled: true },
+            { id: 'def-8', name: 'Pune', enabled: true }
+        ];
 
     const { total: currentTotal } = calculateEstimate();
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA] text-[#0F172A] font-sans pt-4 pb-32 relative z-0">
+        <div className="min-h-screen text-[#0F172A] font-sans pt-4 pb-32 relative z-0 transition-colors duration-500" style={{ backgroundColor }}>
             {/* Minimal Header Removed to allow Main Layout Header */}
 
             <main className="max-w-3xl mx-auto px-6 py-12">
@@ -569,8 +690,9 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                 key={s}
                                 className={cn(
                                     "h-1.5 rounded-full transition-all duration-500 ease-out",
-                                    step === s ? "w-8 bg-black" : step > s ? "w-8 bg-black/20" : "w-1.5 bg-gray-200"
+                                    step === s ? "w-8" : step > s ? "w-8 opacity-20" : "w-1.5 bg-gray-200"
                                 )}
+                                style={{ backgroundColor: step >= s ? primaryColor : undefined }}
                             />
                         ))}
                     </div>
@@ -588,17 +710,24 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                     key={s}
                                     onClick={() => setSegment(s as any)}
                                     className={cn(
-                                        "cursor-pointer group relative overflow-hidden rounded-3xl border-2 p-10 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2",
+                                        "cursor-pointer group relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border-2",
                                         segment === s
-                                            ? "border-black bg-white ring-4 ring-black/5 shadow-xl"
+                                            ? "bg-white ring-4 shadow-xl"
                                             : "border-gray-100 bg-white hover:border-gray-200"
                                     )}
+                                    style={{
+                                        borderRadius: (buttonRadius as number) * 2,
+                                        borderColor: segment === s ? primaryColor : undefined,
+                                        boxShadow: segment === s ? `${primaryColor}15 0px 10px 40px` : undefined
+                                    }}
                                 >
                                     <div className="space-y-6 flex flex-col items-center">
                                         <div className={cn(
                                             "h-24 w-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm",
-                                            segment === s ? "bg-black text-white scale-110" : "bg-gray-50 text-gray-400 group-hover:bg-gray-100 group-hover:scale-110"
-                                        )}>
+                                            segment === s ? "text-white scale-110" : "bg-gray-50 text-gray-400 group-hover:bg-gray-100 group-hover:scale-110"
+                                        )}
+                                            style={{ backgroundColor: segment === s ? primaryColor : undefined }}
+                                        >
                                             {s === 'Residential' ? <Home className="h-10 w-10" /> : <Building2 className="h-10 w-10" />}
                                         </div>
                                         <h3 className="text-3xl font-bold tracking-tight">{s}</h3>
@@ -607,7 +736,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                         </p>
                                     </div>
                                     {segment === s && (
-                                        <div className="absolute top-6 right-6 text-black bg-black/5 rounded-full p-1">
+                                        <div className="absolute top-6 right-6 p-1 rounded-full" style={{ color: primaryColor, backgroundColor: `${primaryColor}10` }}>
                                             <CheckCircle2 className="h-6 w-6" />
                                         </div>
                                     )}
@@ -632,15 +761,22 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                     className={cn(
                                         "relative p-8 border-2 rounded-3xl text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-2 group flex flex-col justify-center min-h-[240px]",
                                         selectedPlan === plan
-                                            ? "border-black bg-white ring-4 ring-black/5 shadow-xl scale-[1.02]"
+                                            ? "bg-white ring-4 shadow-xl scale-[1.02]"
                                             : "border-gray-100 bg-white hover:border-gray-200"
                                     )}
+                                    style={{
+                                        borderRadius: (buttonRadius as number) * 2,
+                                        borderColor: selectedPlan === plan ? primaryColor : undefined,
+                                        boxShadow: selectedPlan === plan ? `${primaryColor}15 0px 10px 40px` : undefined
+                                    }}
                                 >
                                     <div className="space-y-4">
                                         <div className={cn(
-                                            "inline-flex px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-2",
-                                            selectedPlan === plan ? "bg-black text-white" : "bg-gray-100 text-gray-500"
-                                        )}>
+                                            "inline-flex px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-2 transition-colors",
+                                            selectedPlan === plan ? "text-white" : "bg-gray-100 text-gray-500"
+                                        )}
+                                            style={{ backgroundColor: selectedPlan === plan ? primaryColor : undefined }}
+                                        >
                                             {plan === 'Basic' && 'Essential'}
                                             {plan === 'Standard' && 'Popular'}
                                             {plan === 'Luxe' && 'Premium'}
@@ -665,7 +801,10 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                             <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">Project Basics</h1>
                             <p className="text-xl text-gray-500 font-light">Tell us about the space dimensions</p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-2xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                        <div className={cn(
+                            "grid grid-cols-1 gap-10 max-w-2xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-gray-100",
+                            segment === 'Residential' ? "md:grid-cols-2" : "md:grid-cols-1"
+                        )}>
                             <div className="space-y-3">
                                 <Label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Carpet Area (sqft)</Label>
                                 <Input
@@ -677,22 +816,45 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                     autoFocus
                                 />
                             </div>
-                            <div className="space-y-3">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Bedrooms</Label>
-                                <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-2 h-16">
-                                    <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBedroomCount(Math.max(0, bedroomCount - 1))}><Minus className="h-5 w-5" /></Button>
-                                    <div className="flex-1 text-center font-bold text-2xl">{bedroomCount}</div>
-                                    <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBedroomCount(bedroomCount + 1)}><Plus className="h-5 w-5" /></Button>
-                                </div>
-                            </div>
-                            <div className="space-y-3 md:col-span-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Bathrooms</Label>
-                                <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-2 h-16 w-full md:w-2/3 mx-auto">
-                                    <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBathroomCount(Math.max(0, bathroomCount - 1))}><Minus className="h-5 w-5" /></Button>
-                                    <div className="flex-1 text-center font-bold text-2xl">{bathroomCount}</div>
-                                    <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBathroomCount(bathroomCount + 1)}><Plus className="h-5 w-5" /></Button>
-                                </div>
-                            </div>
+                            {segment === 'Residential' ? (
+                                <>
+                                    <div className="space-y-3">
+                                        <Label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Bedrooms</Label>
+                                        <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-2 h-16">
+                                            <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBedroomCount(Math.max(0, bedroomCount - 1))}><Minus className="h-5 w-5" /></Button>
+                                            <div className="flex-1 text-center font-bold text-2xl">{bedroomCount}</div>
+                                            <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBedroomCount(bedroomCount + 1)}><Plus className="h-5 w-5" /></Button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3 md:col-span-2">
+                                        <Label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Bathrooms</Label>
+                                        <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-2 h-16 w-full md:w-2/3 mx-auto">
+                                            <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBathroomCount(Math.max(0, bathroomCount - 1))}><Minus className="h-5 w-5" /></Button>
+                                            <div className="flex-1 text-center font-bold text-2xl">{bathroomCount}</div>
+                                            <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBathroomCount(bathroomCount + 1)}><Plus className="h-5 w-5" /></Button>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="space-y-3">
+                                        <Label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">No. of Cabins</Label>
+                                        <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-2 h-16">
+                                            <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setCabinCount(Math.max(0, cabinCount - 1))}><Minus className="h-5 w-5" /></Button>
+                                            <div className="flex-1 text-center font-bold text-2xl">{cabinCount}</div>
+                                            <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setCabinCount(cabinCount + 1)}><Plus className="h-5 w-5" /></Button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3 md:col-span-1">
+                                        <Label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Bathroom Units</Label>
+                                        <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-2 h-16">
+                                            <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBathroomCount(Math.max(0, bathroomCount - 1))}><Minus className="h-5 w-5" /></Button>
+                                            <div className="flex-1 text-center font-bold text-2xl">{bathroomCount}</div>
+                                            <Button size="icon" variant="ghost" className="h-12 w-12 rounded-xl hover:bg-white shadow-sm" onClick={() => setBathroomCount(bathroomCount + 1)}><Plus className="h-5 w-5" /></Button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
@@ -710,7 +872,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                             {livingAreaCategory && livingAreaCategory.items.filter(i => i.enabled).length > 0 && (
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-                                        <div className="h-10 w-1 bg-black rounded-full"></div>
+                                        <div className="h-10 w-1 rounded-full" style={{ backgroundColor: primaryColor }}></div>
                                         <h2 className="text-2xl font-bold text-[#0F172A]">Living Area</h2>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -746,7 +908,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                             {kitchenCategory && (
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-                                        <div className="h-10 w-1 bg-black rounded-full"></div>
+                                        <div className="h-10 w-1 rounded-full" style={{ backgroundColor: primaryColor }}></div>
                                         <h2 className="text-2xl font-bold text-[#0F172A]">Kitchen</h2>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -812,7 +974,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                             {bedroomCount > 0 && bedroomCategory && (
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-                                        <div className="h-10 w-1 bg-black rounded-full"></div>
+                                        <div className="h-10 w-1 rounded-full" style={{ backgroundColor: primaryColor }}></div>
                                         <h2 className="text-2xl font-bold text-[#0F172A]">Bedrooms</h2>
                                     </div>
                                     {bedrooms.map((bedroom, index) => (
@@ -839,12 +1001,12 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                             {bathroomCount > 0 && bathroomCategory && (
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-                                        <div className="h-10 w-1 bg-black rounded-full"></div>
+                                        <div className="h-10 w-1 rounded-full" style={{ backgroundColor: primaryColor }}></div>
                                         <h2 className="text-2xl font-bold text-[#0F172A]">Bathrooms</h2>
                                     </div>
                                     {bathrooms.map((bathroom, index) => (
                                         <div key={index} className="space-y-4 p-8 bg-gray-50/50 rounded-3xl border border-gray-100">
-                                            <h3 className="font-bold text-lg text-gray-400 uppercase tracking-widest mb-4">Bathroom {index + 1}</h3>
+                                            <h3 className="font-bold text-lg text-gray-400 uppercase tracking-widest mb-4">Bathroom Unit {index + 1}</h3>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 {bathroomCategory.items.filter(i => i.enabled).map(item => (
                                                     <div key={item.id} className="flex items-center justify-between p-5 border border-gray-100 bg-white rounded-2xl hover:border-gray-300 transition-colors">
@@ -861,6 +1023,81 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                     ))}
                                 </div>
                             )}
+
+                            {/* Cabins (Commercial Only) */}
+                            {cabinCount > 0 && categories.find(c => c.id === 'cabin' || c.name.toLowerCase() === 'cabin') && (
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
+                                        <div className="h-10 w-1 rounded-full" style={{ backgroundColor: primaryColor }}></div>
+                                        <h2 className="text-2xl font-bold text-[#0F172A]">Office Cabins</h2>
+                                    </div>
+                                    {cabins.map((cabin, index) => (
+                                        <div key={index} className="space-y-4 p-8 bg-gray-50/50 rounded-3xl border border-gray-100">
+                                            <h3 className="font-bold text-lg text-gray-400 uppercase tracking-widest mb-4">Cabin {index + 1}</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {categories.find(c => c.id === 'cabin' || c.name.toLowerCase() === 'cabin')?.items.filter(i => i.enabled).map(item => (
+                                                    <div key={item.id} className="flex items-center justify-between p-5 border border-gray-100 bg-white rounded-2xl hover:border-gray-300 transition-colors">
+                                                        <span className="font-medium">{item.name}</span>
+                                                        <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
+                                                            <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md hover:bg-white hover:shadow-sm" onClick={() => updateItemQuantity('cabin', item.id, -1, index)}><Minus className="h-3 w-3" /></Button>
+                                                            <span className="w-6 text-center font-bold text-sm">{cabin.items[item.id] || 0}</span>
+                                                            <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md hover:bg-white hover:shadow-sm" onClick={() => updateItemQuantity('cabin', item.id, 1, index)}><Plus className="h-3 w-3" /></Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Other Categories */}
+                            {otherCategories.map(category => (
+                                <div key={category.id} className="space-y-6">
+                                    <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
+                                        <div className="h-10 w-1 rounded-full" style={{ backgroundColor: primaryColor }}></div>
+                                        <h2 className="text-2xl font-bold text-[#0F172A]">{category.name}</h2>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {category.items.filter(i => i.enabled).map(item => (
+                                            <div key={item.id} className="flex items-center justify-between p-6 border border-gray-100 bg-white rounded-2xl hover:shadow-lg transition-all duration-300">
+                                                <span className="font-semibold text-lg text-gray-700">{item.name}</span>
+                                                <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-1">
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm"
+                                                        onClick={() => setLivingAreaItems(prev => ({
+                                                            ...prev,
+                                                            [item.id]: Math.max(0, (prev[item.id] || 0) - 1)
+                                                        }))}
+                                                    >
+                                                        <Minus className="h-4 w-4" />
+                                                    </Button>
+                                                    <span className="w-8 text-center font-bold text-lg">{livingAreaItems[item.id] || 0}</span>
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm"
+                                                        onClick={() => setLivingAreaItems(prev => ({
+                                                            ...prev,
+                                                            [item.id]: (prev[item.id] || 0) + 1
+                                                        }))}
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+
+                            {categories.length === 0 && (
+                                <div className="text-center py-20 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                                    <p className="text-gray-400">No items available for configuration.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -873,7 +1110,8 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                             <p className="text-xl text-gray-500 font-light">Confirm your details and receive estimate</p>
                         </div>
 
-                        <div className="bg-black rounded-3xl p-10 text-white text-center shadow-2xl transform hover:scale-[1.01] transition-transform duration-500 relative overflow-hidden">
+                        <div className="rounded-3xl p-10 text-white text-center shadow-2xl transform hover:scale-[1.01] transition-all duration-500 relative overflow-hidden"
+                            style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, borderRadius: (buttonRadius as number) * 2 }}>
                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
                             <div className="relative z-10">
                                 <p className="text-gray-400 font-bold mb-3 uppercase tracking-widest text-xs">Estimated Cost</p>
@@ -926,17 +1164,19 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
 
                     {step < 5 ? (
                         <Button
-                            className="bg-black text-white hover:bg-gray-800 rounded-full px-10 py-7 text-lg font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                            className="text-white px-10 py-7 text-lg font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-0"
                             onClick={() => setStep(s => s + 1)}
                             disabled={!isStepValid()}
+                            style={{ backgroundColor: primaryColor, borderRadius: (buttonRadius as number) * 2 }}
                         >
                             Continue <ChevronRight className="ml-2 h-5 w-5" />
                         </Button>
                     ) : (
                         <Button
-                            className="bg-black text-white hover:bg-gray-800 rounded-full px-10 py-7 text-lg font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                            className="text-white px-10 py-7 text-lg font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-0"
                             onClick={handleSubmit}
                             disabled={isSubmitting || !isStepValid()}
+                            style={{ backgroundColor: primaryColor, borderRadius: (buttonRadius as number) * 2 }}
                         >
                             {isSubmitting ? <><Loader2 className="mr-2 animate-spin" /> Submitting...</> : "Confirm & Submit"}
                         </Button>

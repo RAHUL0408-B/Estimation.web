@@ -17,8 +17,7 @@ export function usePendingApprovals() {
         const tenantsRef = collection(db, "tenants");
         const q = query(
             tenantsRef,
-            where("status", "==", "pending"),
-            orderBy("createdAt", "desc")
+            where("status", "==", "pending")
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -26,6 +25,13 @@ export function usePendingApprovals() {
 
             snapshot.forEach((doc) => {
                 pendingList.push({ id: doc.id, ...doc.data() } as PendingApproval);
+            });
+
+            // Sort client-side to avoid index requirement
+            pendingList.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                return timeB - timeA;
             });
 
             setApprovals(pendingList);

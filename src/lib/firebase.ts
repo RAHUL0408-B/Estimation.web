@@ -4,7 +4,7 @@ import { Firestore, getFirestore } from "firebase/firestore";
 import { FirebaseStorage, getStorage } from "firebase/storage";
 import { Analytics, getAnalytics, isSupported } from "firebase/analytics";
 
-const firebaseConfig = {
+export const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -21,14 +21,14 @@ let db: Firestore | any = null;
 let storage: FirebaseStorage | any = null;
 let analytics: Analytics | undefined;
 
-if (typeof window !== "undefined") {
-    try {
-        if (firebaseConfig.apiKey) {
-            app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-            auth = getAuth(app);
-            db = getFirestore(app);
-            storage = getStorage(app);
+try {
+    if (firebaseConfig.apiKey) {
+        app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        auth = getAuth(app);
+        db = getFirestore(app);
+        storage = getStorage(app);
 
+        if (typeof window !== "undefined") {
             // Set auth persistence to local storage (persists even after browser close)
             setPersistence(auth, browserLocalPersistence).catch((error) => {
                 console.error("Error setting auth persistence:", error);
@@ -39,12 +39,12 @@ if (typeof window !== "undefined") {
                     analytics = getAnalytics(app);
                 }
             });
-        } else {
-            console.warn("Firebase API Key is missing. Check your environment variables (NEXT_PUBLIC_FIREBASE_API_KEY).");
         }
-    } catch (error) {
-        console.error("Firebase initialization error:", error);
+    } else {
+        console.warn("Firebase API Key is missing. Check your environment variables (NEXT_PUBLIC_FIREBASE_API_KEY).");
     }
+} catch (error) {
+    console.error("Firebase initialization error:", error);
 }
 
 export const isFirebaseReady = !!(auth && db);

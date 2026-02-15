@@ -27,6 +27,245 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+// --- Sub-components for better organization ---
+
+interface CategoryCardProps {
+    category: Category;
+    catIndex: number;
+    totalInGroup: number;
+    moveCategoryUp: (id: string) => void;
+    moveCategoryDown: (id: string) => void;
+    editingCategoryId: string | null;
+    setEditingCategoryId: (id: string | null) => void;
+    updateCategoryName: (id: string, name: string) => void;
+    deleteCategory: (id: string) => void;
+    setSelectedCategoryForItem: (id: string) => void;
+    setShowAddItem: (show: boolean) => void;
+    editingItemId: string | null;
+    setEditingItemId: (id: string | null) => void;
+    updateItem: (catId: string, itemId: string, updates: Partial<PricingItem>) => void;
+    toggleItem: (catId: string, itemId: string) => void;
+    deleteItem: (catId: string, itemId: string) => void;
+}
+
+const CategoryCard = ({
+    category, catIndex, totalInGroup,
+    moveCategoryUp, moveCategoryDown,
+    editingCategoryId, setEditingCategoryId, updateCategoryName, deleteCategory,
+    setSelectedCategoryForItem, setShowAddItem,
+    editingItemId, setEditingItemId, updateItem, toggleItem, deleteItem
+}: CategoryCardProps) => {
+    return (
+        <div key={category.id} className="border rounded-xl p-6 space-y-6 hover:shadow-md transition-shadow group/card bg-white">
+            {/* Category Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0 hover:bg-slate-100"
+                            onClick={() => moveCategoryUp(category.id)}
+                            disabled={catIndex === 0}
+                        >
+                            <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0 hover:bg-slate-100"
+                            onClick={() => moveCategoryDown(category.id)}
+                            disabled={catIndex === totalInGroup - 1}
+                        >
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    {editingCategoryId === category.id ? (
+                        <div className="flex items-center gap-2">
+                            <Input
+                                autoFocus
+                                className="font-bold text-xl w-72 h-10"
+                                defaultValue={category.name}
+                                onBlur={(e) => updateCategoryName(category.id, e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') updateCategoryName(category.id, e.currentTarget.value);
+                                    else if (e.key === 'Escape') setEditingCategoryId(null);
+                                }}
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-xl text-[#0F172A]">{category.name}</h3>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-gray-400 hover:text-blue-600 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                                onClick={() => setEditingCategoryId(category.id)}
+                            >
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setSelectedCategoryForItem(category.id);
+                            setShowAddItem(true);
+                        }}
+                        className="text-blue-600 border-blue-100 hover:bg-blue-50 h-9"
+                    >
+                        <Plus className="h-4 w-4 mr-1" /> Add Item
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteCategory(category.id)}
+                        className="h-9 w-9 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+
+            {/* Items Table */}
+            {category.items.length > 0 ? (
+                <div className="overflow-hidden border rounded-lg">
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50 border-b">
+                                <th className="text-left p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[25%]">Item Name</th>
+                                <th className="text-center p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">Type</th>
+                                <th className="text-right p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Basic (₹)</th>
+                                <th className="text-right p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Standard (₹)</th>
+                                <th className="text-right p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Luxe (₹)</th>
+                                <th className="text-center p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[8%]">Status</th>
+                                <th className="text-center p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%]">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {category.items.map((item) => (
+                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group/item">
+                                    <td className="p-4">
+                                        {editingItemId === item.id ? (
+                                            <Input
+                                                autoFocus
+                                                className="h-8 text-sm"
+                                                defaultValue={item.name}
+                                                onBlur={(e) => {
+                                                    updateItem(category.id, item.id, { name: e.target.value });
+                                                    setEditingItemId(null);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        updateItem(category.id, item.id, { name: e.currentTarget.value });
+                                                        setEditingItemId(null);
+                                                    } else if (e.key === 'Escape') {
+                                                        setEditingItemId(null);
+                                                    }
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-semibold text-slate-700">{item.name}</span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-blue-600 transition-opacity"
+                                                    onClick={() => setEditingItemId(item.id)}
+                                                >
+                                                    <Pencil className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <Select
+                                            value={item.type}
+                                            onValueChange={(value: 'fixed' | 'perUnit' | 'perSqft') =>
+                                                updateItem(category.id, item.id, { type: value })
+                                            }
+                                        >
+                                            <SelectTrigger className="w-full h-8 text-[11px] font-medium bg-white">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="fixed">Fixed</SelectItem>
+                                                <SelectItem value="perUnit">Per Unit</SelectItem>
+                                                <SelectItem value="perSqft">Per Sqft</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </td>
+                                    <td className="p-4 text-right">
+                                        <Input
+                                            type="number"
+                                            className="text-right h-8 w-full text-sm bg-white"
+                                            value={item.basicPrice}
+                                            onChange={(e) =>
+                                                updateItem(category.id, item.id, { basicPrice: parseInt(e.target.value) || 0 })
+                                            }
+                                        />
+                                    </td>
+                                    <td className="p-4 text-right">
+                                        <Input
+                                            type="number"
+                                            className="text-right h-8 w-full text-sm font-medium bg-slate-50 border-slate-200"
+                                            value={item.standardPrice}
+                                            onChange={(e) =>
+                                                updateItem(category.id, item.id, { standardPrice: parseInt(e.target.value) || 0 })
+                                            }
+                                        />
+                                    </td>
+                                    <td className="p-4 text-right">
+                                        <Input
+                                            type="number"
+                                            className="text-right h-8 w-full text-sm bg-white"
+                                            value={item.luxePrice}
+                                            onChange={(e) =>
+                                                updateItem(category.id, item.id, { luxePrice: parseInt(e.target.value) || 0 })
+                                            }
+                                        />
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <button
+                                            onClick={() => toggleItem(category.id, item.id)}
+                                            className={cn(
+                                                "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors shadow-inner",
+                                                item.enabled ? "bg-emerald-500" : "bg-slate-200"
+                                            )}
+                                        >
+                                            <span className={cn(
+                                                "pointer-events-none block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform",
+                                                item.enabled ? "translate-x-5" : "translate-x-0"
+                                            )} />
+                                        </button>
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => deleteItem(category.id, item.id)}
+                                            className="h-8 w-8 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <div className="text-center py-10 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
+                    <p className="text-sm text-slate-400">No items added yet. Click "Add Item" to start building this category.</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function PricingPage() {
     const { tenant } = useTenantAuth();
     const { config, loading, saveConfig } = usePricingConfig(tenant?.id || null);
@@ -41,6 +280,7 @@ export default function PricingPage() {
 
     // Form states
     const [newCategoryName, setNewCategoryName] = useState("");
+    const [newCategoryType, setNewCategoryType] = useState<'residential' | 'commercial'>('residential');
     const [selectedCategoryForItem, setSelectedCategoryForItem] = useState("");
     const [newItemName, setNewItemName] = useState("");
     const [newItemType, setNewItemType] = useState<'fixed' | 'perUnit' | 'perSqft'>('fixed');
@@ -80,6 +320,7 @@ export default function PricingPage() {
         const newCategory: Category = {
             id: `cat_${Date.now()}`,
             name: newCategoryName,
+            type: newCategoryType,
             order: localConfig.categories?.length || 0,
             items: []
         };
@@ -119,28 +360,54 @@ export default function PricingPage() {
 
     const moveCategoryUp = (categoryId: string) => {
         if (!localConfig?.categories) return;
-        const index = localConfig.categories.findIndex(c => c.id === categoryId);
-        if (index <= 0) return;
 
-        const newCategories = [...localConfig.categories];
-        [newCategories[index - 1], newCategories[index]] = [newCategories[index], newCategories[index - 1]];
-        newCategories.forEach((cat, idx) => cat.order = idx);
+        const category = localConfig.categories.find(c => c.id === categoryId);
+        if (!category) return;
 
-        const updatedConfig = { ...localConfig, categories: newCategories };
+        const sameTypeCategories = localConfig.categories
+            .filter(c => (!category.type && !c.type) || c.type === category.type)
+            .sort((a, b) => a.order - b.order);
+
+        const indexInSameType = sameTypeCategories.findIndex(c => c.id === categoryId);
+        if (indexInSameType <= 0) return;
+
+        const categoryAbove = sameTypeCategories[indexInSameType - 1];
+
+        // Swap orders
+        const updatedCategories = localConfig.categories.map(c => {
+            if (c.id === categoryId) return { ...c, order: categoryAbove.order };
+            if (c.id === categoryAbove.id) return { ...c, order: category.order };
+            return c;
+        });
+
+        const updatedConfig = { ...localConfig, categories: updatedCategories };
         setLocalConfig(updatedConfig);
         saveConfig(updatedConfig); // Auto-save
     };
 
     const moveCategoryDown = (categoryId: string) => {
         if (!localConfig?.categories) return;
-        const index = localConfig.categories.findIndex(c => c.id === categoryId);
-        if (index < 0 || index >= localConfig.categories.length - 1) return;
 
-        const newCategories = [...localConfig.categories];
-        [newCategories[index], newCategories[index + 1]] = [newCategories[index + 1], newCategories[index]];
-        newCategories.forEach((cat, idx) => cat.order = idx);
+        const category = localConfig.categories.find(c => c.id === categoryId);
+        if (!category) return;
 
-        const updatedConfig = { ...localConfig, categories: newCategories };
+        const sameTypeCategories = localConfig.categories
+            .filter(c => (!category.type && !c.type) || c.type === category.type)
+            .sort((a, b) => a.order - b.order);
+
+        const indexInSameType = sameTypeCategories.findIndex(c => c.id === categoryId);
+        if (indexInSameType < 0 || indexInSameType >= sameTypeCategories.length - 1) return;
+
+        const categoryBelow = sameTypeCategories[indexInSameType + 1];
+
+        // Swap orders
+        const updatedCategories = localConfig.categories.map(c => {
+            if (c.id === categoryId) return { ...c, order: categoryBelow.order };
+            if (c.id === categoryBelow.id) return { ...c, order: category.order };
+            return c;
+        });
+
+        const updatedConfig = { ...localConfig, categories: updatedCategories };
         setLocalConfig(updatedConfig);
         saveConfig(updatedConfig); // Auto-save
     };
@@ -247,85 +514,101 @@ export default function PricingPage() {
             name: newKitchenLayoutName,
             enabled: true
         };
-        setLocalConfig({
+        const updatedConfig = {
             ...localConfig,
             kitchenLayouts: [...(localConfig.kitchenLayouts || []), newLayout]
-        });
+        };
+        setLocalConfig(updatedConfig);
+        await saveConfig(updatedConfig);
         setNewKitchenLayoutName("");
         setShowAddKitchenLayout(false);
     };
 
-    const deleteKitchenLayout = (layoutId: string) => {
+    const deleteKitchenLayout = async (layoutId: string) => {
         if (!localConfig) return;
-        setLocalConfig({
+        const updatedConfig = {
             ...localConfig,
             kitchenLayouts: localConfig.kitchenLayouts?.filter(l => l.id !== layoutId)
-        });
+        };
+        setLocalConfig(updatedConfig);
+        await saveConfig(updatedConfig);
     };
 
-    const updateKitchenLayout = (layoutId: string, name: string) => {
+    const updateKitchenLayout = async (layoutId: string, name: string) => {
         if (!localConfig) return;
-        setLocalConfig({
+        const updatedConfig = {
             ...localConfig,
             kitchenLayouts: localConfig.kitchenLayouts?.map(l =>
                 l.id === layoutId ? { ...l, name } : l
             )
-        });
+        };
+        setLocalConfig(updatedConfig);
+        await saveConfig(updatedConfig);
         setEditingLayoutId(null);
     };
 
-    const toggleKitchenLayout = (layoutId: string) => {
+    const toggleKitchenLayout = async (layoutId: string) => {
         if (!localConfig) return;
-        setLocalConfig({
+        const updatedConfig = {
             ...localConfig,
             kitchenLayouts: localConfig.kitchenLayouts?.map(l =>
                 l.id === layoutId ? { ...l, enabled: !l.enabled } : l
             )
-        });
+        };
+        setLocalConfig(updatedConfig);
+        await saveConfig(updatedConfig);
     };
 
-    const addKitchenMaterial = () => {
+    const addKitchenMaterial = async () => {
         if (!localConfig || !newKitchenMaterialName) return;
         const newMaterial: DropdownOption = {
             id: `km_${Date.now()}`,
             name: newKitchenMaterialName,
             enabled: true
         };
-        setLocalConfig({
+        const updatedConfig = {
             ...localConfig,
             kitchenMaterials: [...(localConfig.kitchenMaterials || []), newMaterial]
-        });
+        };
+        setLocalConfig(updatedConfig);
+        await saveConfig(updatedConfig);
         setNewKitchenMaterialName("");
         setShowAddKitchenMaterial(false);
     };
 
-    const deleteKitchenMaterial = (materialId: string) => {
+    const deleteKitchenMaterial = async (materialId: string) => {
         if (!localConfig) return;
-        setLocalConfig({
+        const updatedConfig = {
             ...localConfig,
             kitchenMaterials: localConfig.kitchenMaterials?.filter(m => m.id !== materialId)
-        });
+        };
+        setLocalConfig(updatedConfig);
+        await saveConfig(updatedConfig);
     };
 
-    const updateKitchenMaterial = (materialId: string, name: string) => {
+    const updateKitchenMaterial = async (materialId: string, name: string) => {
         if (!localConfig) return;
-        setLocalConfig({
+        const updatedConfig = {
             ...localConfig,
             kitchenMaterials: localConfig.kitchenMaterials?.map(m =>
                 m.id === materialId ? { ...m, name } : m
             )
-        });
+        };
+        setLocalConfig(updatedConfig);
+        await saveConfig(updatedConfig);
         setEditingMaterialId(null);
     };
 
-    const toggleKitchenMaterial = (materialId: string) => {
+    const toggleKitchenMaterial = async (materialId: string) => {
         if (!localConfig) return;
-        setLocalConfig({
+        const updatedConfig = {
             ...localConfig,
             kitchenMaterials: localConfig.kitchenMaterials?.map(m =>
                 m.id === materialId ? { ...m, enabled: !m.enabled } : m
             )
-        });
+        };
+        setLocalConfig(updatedConfig);
+        await saveConfig(updatedConfig);
     };
 
     if (loading || !localConfig) {
@@ -359,230 +642,101 @@ export default function PricingPage() {
             {tenant?.id && <CityManagement tenantId={tenant.id} />}
 
             {/* Categories Section */}
-            <Card className="border-none shadow-sm bg-white">
-                <CardHeader className="flex flex-row items-center justify-between p-6 border-b">
-                    <CardTitle className="text-lg font-bold text-[#0F172A]">Categories & Items</CardTitle>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAddCategory(true)}
-                        className="text-blue-600 hover:text-blue-700"
-                    >
-                        <Plus className="h-4 w-4 mr-1" /> Add Category
-                    </Button>
-                </CardHeader>
-                <CardContent className="p-6 space-y-6">
-                    {localConfig.categories?.sort((a, b) => a.order - b.order).map((category, catIndex) => (
-                        <div key={category.id} className="border rounded-lg p-4 space-y-4">
-                            {/* Category Header */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex flex-col gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-5 w-5 p-0"
-                                            onClick={() => moveCategoryUp(category.id)}
-                                            disabled={catIndex === 0}
-                                        >
-                                            <ChevronUp className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-5 w-5 p-0"
-                                            onClick={() => moveCategoryDown(category.id)}
-                                            disabled={catIndex === (localConfig.categories?.length || 0) - 1}
-                                        >
-                                            <ChevronDown className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                    {editingCategoryId === category.id ? (
-                                        <Input
-                                            autoFocus
-                                            className="font-bold text-lg w-64"
-                                            defaultValue={category.name}
-                                            onBlur={(e) => updateCategoryName(category.id, e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') updateCategoryName(category.id, e.currentTarget.value);
-                                                else if (e.key === 'Escape') setEditingCategoryId(null);
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-lg text-[#0F172A]">{category.name}</h3>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6 text-gray-400 hover:text-blue-600"
-                                                onClick={() => setEditingCategoryId(category.id)}
-                                            >
-                                                <Pencil className="h-3 w-3" />
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                            setSelectedCategoryForItem(category.id);
-                                            setShowAddItem(true);
-                                        }}
-                                        className="text-blue-600 hover:text-blue-700"
-                                    >
-                                        <Plus className="h-4 w-4 mr-1" /> Add Item
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => deleteCategory(category.id)}
-                                        className="h-8 w-8 text-gray-400 hover:text-red-600"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* Items Table */}
-                            {category.items.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr className="border-b bg-gray-50">
-                                                <th className="text-left p-3 text-xs font-bold text-gray-600 uppercase w-[20%]">Item Name</th>
-                                                <th className="text-center p-3 text-xs font-bold text-gray-600 uppercase w-[10%]">Type</th>
-                                                <th className="text-right p-3 text-xs font-bold text-gray-600 uppercase w-[15%]">Basic (₹)</th>
-                                                <th className="text-right p-3 text-xs font-bold text-gray-600 uppercase w-[15%]">Standard (₹)</th>
-                                                <th className="text-right p-3 text-xs font-bold text-gray-600 uppercase w-[15%]">Luxe (₹)</th>
-                                                <th className="text-center p-3 text-xs font-bold text-gray-600 uppercase w-[10%]">Enabled</th>
-                                                <th className="text-center p-3 text-xs font-bold text-gray-600 uppercase w-[15%]">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {category.items.map((item) => (
-                                                <tr key={item.id} className="border-b hover:bg-gray-50">
-                                                    <td className="p-3">
-                                                        {editingItemId === item.id ? (
-                                                            <Input
-                                                                autoFocus
-                                                                className="text-sm"
-                                                                defaultValue={item.name}
-                                                                onBlur={(e) => {
-                                                                    updateItem(category.id, item.id, { name: e.target.value });
-                                                                    setEditingItemId(null);
-                                                                }}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter') {
-                                                                        updateItem(category.id, item.id, { name: e.currentTarget.value });
-                                                                        setEditingItemId(null);
-                                                                    } else if (e.key === 'Escape') {
-                                                                        setEditingItemId(null);
-                                                                    }
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm font-medium">{item.name}</span>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600"
-                                                                    onClick={() => setEditingItemId(item.id)}
-                                                                >
-                                                                    <Pencil className="h-3 w-3" />
-                                                                </Button>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-3 text-center">
-                                                        <Select
-                                                            value={item.type}
-                                                            onValueChange={(value: 'fixed' | 'perUnit' | 'perSqft') =>
-                                                                updateItem(category.id, item.id, { type: value })
-                                                            }
-                                                        >
-                                                            <SelectTrigger className="w-28 h-8 text-xs">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="fixed">Fixed</SelectItem>
-                                                                <SelectItem value="perUnit">Per Unit</SelectItem>
-                                                                <SelectItem value="perSqft">Per Sqft</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </td>
-                                                    <td className="p-3 text-right">
-                                                        <Input
-                                                            type="number"
-                                                            className="text-right h-8 w-28"
-                                                            value={item.basicPrice}
-                                                            onChange={(e) =>
-                                                                updateItem(category.id, item.id, { basicPrice: parseInt(e.target.value) || 0 })
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td className="p-3 text-right">
-                                                        <Input
-                                                            type="number"
-                                                            className="text-right h-8 w-28"
-                                                            value={item.standardPrice}
-                                                            onChange={(e) =>
-                                                                updateItem(category.id, item.id, { standardPrice: parseInt(e.target.value) || 0 })
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td className="p-3 text-right">
-                                                        <Input
-                                                            type="number"
-                                                            className="text-right h-8 w-28"
-                                                            value={item.luxePrice}
-                                                            onChange={(e) =>
-                                                                updateItem(category.id, item.id, { luxePrice: parseInt(e.target.value) || 0 })
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td className="p-3 text-center">
-                                                        <button
-                                                            onClick={() => toggleItem(category.id, item.id)}
-                                                            className={cn(
-                                                                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                                                                item.enabled ? "bg-[#0F172A]" : "bg-gray-200"
-                                                            )}
-                                                        >
-                                                            <span className={cn(
-                                                                "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
-                                                                item.enabled ? "translate-x-5" : "translate-x-0"
-                                                            )} />
-                                                        </button>
-                                                    </td>
-                                                    <td className="p-3 text-center">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => deleteItem(category.id, item.id)}
-                                                            className="h-8 w-8 text-gray-400 hover:text-red-600"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-400 text-center py-4">No items in this category. Click "Add Item" to get started.</p>
-                            )}
+            <div className="space-y-8">
+                {/* Residential Column */}
+                <Card className="border-none shadow-sm bg-white overflow-hidden">
+                    <CardHeader className="flex flex-row items-center justify-between p-6 border-b bg-slate-50">
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-1 bg-orange-500 rounded-full"></div>
+                            <CardTitle className="text-lg font-bold text-[#0F172A]">Residential Categories</CardTitle>
                         </div>
-                    ))}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                setNewCategoryType('residential');
+                                setShowAddCategory(true);
+                            }}
+                            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                        >
+                            <Plus className="h-4 w-4 mr-1" /> Add Residential Category
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6">
+                        {localConfig.categories?.filter(c => !c.type || c.type === 'residential').sort((a, b) => a.order - b.order).map((category, catIndex, filteredArr) => (
+                            <CategoryCard
+                                key={category.id}
+                                category={category}
+                                catIndex={catIndex}
+                                totalInGroup={filteredArr.length}
+                                moveCategoryUp={moveCategoryUp}
+                                moveCategoryDown={moveCategoryDown}
+                                editingCategoryId={editingCategoryId}
+                                setEditingCategoryId={setEditingCategoryId}
+                                updateCategoryName={updateCategoryName}
+                                deleteCategory={deleteCategory}
+                                setSelectedCategoryForItem={setSelectedCategoryForItem}
+                                setShowAddItem={setShowAddItem}
+                                editingItemId={editingItemId}
+                                setEditingItemId={setEditingItemId}
+                                updateItem={updateItem}
+                                toggleItem={toggleItem}
+                                deleteItem={deleteItem}
+                            />
+                        ))}
+                        {(!localConfig.categories?.some(c => !c.type || c.type === 'residential')) && (
+                            <p className="text-center text-gray-400 py-8">No residential categories yet.</p>
+                        )}
+                    </CardContent>
+                </Card>
 
-                    {(!localConfig.categories || localConfig.categories.length === 0) && (
-                        <p className="text-center text-gray-400 py-8">No categories yet. Click "Add Category" to get started.</p>
-                    )}
-                </CardContent>
-            </Card>
+                {/* Commercial Column */}
+                <Card className="border-none shadow-sm bg-white overflow-hidden">
+                    <CardHeader className="flex flex-row items-center justify-between p-6 border-b bg-slate-50">
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-1 bg-blue-500 rounded-full"></div>
+                            <CardTitle className="text-lg font-bold text-[#0F172A]">Commercial Categories</CardTitle>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                setNewCategoryType('commercial');
+                                setShowAddCategory(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                            <Plus className="h-4 w-4 mr-1" /> Add Commercial Category
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6">
+                        {localConfig.categories?.filter(c => c.type === 'commercial').sort((a, b) => a.order - b.order).map((category, catIndex, filteredArr) => (
+                            <CategoryCard
+                                key={category.id}
+                                category={category}
+                                catIndex={catIndex}
+                                totalInGroup={filteredArr.length}
+                                moveCategoryUp={moveCategoryUp}
+                                moveCategoryDown={moveCategoryDown}
+                                editingCategoryId={editingCategoryId}
+                                setEditingCategoryId={setEditingCategoryId}
+                                updateCategoryName={updateCategoryName}
+                                deleteCategory={deleteCategory}
+                                setSelectedCategoryForItem={setSelectedCategoryForItem}
+                                setShowAddItem={setShowAddItem}
+                                editingItemId={editingItemId}
+                                setEditingItemId={setEditingItemId}
+                                updateItem={updateItem}
+                                toggleItem={toggleItem}
+                                deleteItem={deleteItem}
+                            />
+                        ))}
+                        {(!localConfig.categories?.some(c => c.type === 'commercial')) && (
+                            <p className="text-center text-gray-400 py-8">No commercial categories yet.</p>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* Kitchen Dropdowns Section */}
             <div className="grid grid-cols-2 gap-6">
@@ -730,9 +884,21 @@ export default function PricingPage() {
                     </DialogHeader>
                     <div className="space-y-4">
                         <div>
+                            <Label>Category Type</Label>
+                            <Select value={newCategoryType} onValueChange={(value: 'residential' | 'commercial') => setNewCategoryType(value)}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="residential">Residential</SelectItem>
+                                    <SelectItem value="commercial">Commercial</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
                             <Label>Category Name</Label>
                             <Input
-                                placeholder="e.g., Living Area, Bedroom, Bathroom"
+                                placeholder="e.g., Living Area, Office Space, Reception"
                                 value={newCategoryName}
                                 onChange={(e) => setNewCategoryName(e.target.value)}
                             />

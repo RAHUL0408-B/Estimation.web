@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { HeroSlide } from "@/types/website";
@@ -9,17 +10,50 @@ import Image from "next/image";
 interface HeroSliderProps {
     slides: HeroSlide[];
     primaryColor: string;
+    tenantId: string;
 }
 
-export default function HeroSlider({ slides, primaryColor }: HeroSliderProps) {
+export default function HeroSlider({ slides, primaryColor, tenantId }: HeroSliderProps) {
     const [currentSlide, setCurrentSlide] = useState(0);
+
+    // Helper to resolve links within the tenant storefront
+    const resolveLink = (link: string) => {
+        if (!link || link === "#") return "#";
+
+        // If it's an external link, return as is
+        if (link.startsWith('http') || link.startsWith('mailto:') || link.startsWith('tel:')) {
+            return link;
+        }
+
+        // Special handling for the known pages to ensure they match header/footer
+        const lowerLink = link.toLowerCase();
+        if (lowerLink.includes('estimate')) return `/${tenantId}/estimate`;
+        if (lowerLink.includes('consultation')) return `/${tenantId}/book-consultation`;
+        if (lowerLink.includes('contact')) return `/${tenantId}/contact`;
+        if (lowerLink.includes('portfolio')) return `/${tenantId}/portfolio`;
+
+        // Cleaning the link for general resolution
+        let cleanPath = link;
+        if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+
+        // If the path already starts with the tenantId (case-insensitive check)
+        if (cleanPath.toLowerCase().startsWith(tenantId.toLowerCase())) {
+            // It might be "tenantId/path" - ensure it has exactly one leading slash
+            const pathAfterTenant = cleanPath.substring(tenantId.length);
+            const separator = pathAfterTenant.startsWith('/') ? '' : '/';
+            return `/${tenantId}${separator}${pathAfterTenant.startsWith('/') ? pathAfterTenant.substring(1) : pathAfterTenant}`;
+        }
+
+        // Prepend tenantId for any other internal path
+        return `/${tenantId}/${cleanPath}`;
+    };
 
     // Auto-advance slides every 5 seconds
     useEffect(() => {
         if (slides.length <= 1) return;
 
         const interval = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % slides.length);
+            setCurrentSlide((prev: number) => (prev + 1) % slides.length);
         }, 5000);
 
         return () => clearInterval(interval);
@@ -30,11 +64,11 @@ export default function HeroSlider({ slides, primaryColor }: HeroSliderProps) {
     };
 
     const nextSlide = () => {
-        setCurrentSlide((prev) => (prev + 1) % slides.length);
+        setCurrentSlide((prev: number) => (prev + 1) % slides.length);
     };
 
     const prevSlide = () => {
-        setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+        setCurrentSlide((prev: number) => (prev - 1 + slides.length) % slides.length);
     };
 
     if (slides.length === 0) {
@@ -47,6 +81,23 @@ export default function HeroSlider({ slides, primaryColor }: HeroSliderProps) {
                     <p className="mx-auto max-w-2xl text-lg text-gray-200 sm:text-xl">
                         Transform your space into something extraordinary
                     </p>
+                    <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+                        <Link href={`/${tenantId}/estimate`}>
+                            <button
+                                className="h-14 rounded-full px-10 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-2"
+                                style={{ backgroundColor: primaryColor, color: '#fff' }}
+                            >
+                                Get Estimate
+                            </button>
+                        </Link>
+                        <Link href={`/${tenantId}/book-consultation`}>
+                            <button
+                                className="h-14 rounded-full px-10 text-lg font-semibold bg-white/10 backdrop-blur-md border border-white/30 text-white shadow-lg hover:bg-white/20 transition-all duration-300 hover:scale-105 active:scale-95"
+                            >
+                                Book Consultation
+                            </button>
+                        </Link>
+                    </div>
                 </div>
             </section>
         );
@@ -88,23 +139,23 @@ export default function HeroSlider({ slides, primaryColor }: HeroSliderProps) {
                             </p>
                             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row animate-slide-up animation-delay-400">
                                 {slide.primaryButtonText && (
-                                    <a href={slide.primaryButtonLink}>
+                                    <Link href={resolveLink(slide.primaryButtonLink)}>
                                         <button
                                             className="h-14 rounded-full px-10 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-2"
                                             style={{ backgroundColor: primaryColor, color: '#fff' }}
                                         >
                                             {slide.primaryButtonText}
                                         </button>
-                                    </a>
+                                    </Link>
                                 )}
                                 {slide.secondaryButtonText && (
-                                    <a href={slide.secondaryButtonLink}>
+                                    <Link href={resolveLink(slide.secondaryButtonLink)}>
                                         <button
                                             className="h-14 rounded-full px-10 text-lg font-semibold bg-white/10 backdrop-blur-md border border-white/30 text-white shadow-lg hover:bg-white/20 transition-all duration-300 hover:scale-105 active:scale-95"
                                         >
                                             {slide.secondaryButtonText}
                                         </button>
-                                    </a>
+                                    </Link>
                                 )}
                             </div>
                         </div>

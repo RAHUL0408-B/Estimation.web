@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Briefcase, MessageSquare, Info, Phone, FileText } from "lucide-react";
+import { Home, Briefcase, MessageSquare, Info, Phone, FileText, Layout } from "lucide-react";
 
 // Import page editors
 import HomePageEditor from "./pages/HomePageEditor";
@@ -10,6 +10,7 @@ import PortfolioPageEditor from "./pages/PortfolioPageEditor";
 import TestimonialsPageEditor from "./pages/TestimonialsPageEditor";
 import AboutPageEditor from "./pages/AboutPageEditor";
 import ContactPageEditor from "./pages/ContactPageEditor";
+import ServicesPageEditor from "./pages/ServicesPageEditor";
 
 interface PagesTabProps {
     tenantId: string;
@@ -25,7 +26,7 @@ export default function PagesTab({ tenantId }: PagesTabProps) {
                     <div>
                         <h4 className="font-semibold text-blue-900 mb-1">Fixed Page Structure</h4>
                         <p className="text-sm text-blue-700">
-                            Your website has 6 core pages that cannot be deleted. You can edit the
+                            Your website has 7 core pages that cannot be deleted. You can edit the
                             content of each page below. The <strong>Get Estimate</strong> page is
                             managed separately in the Pricing section.
                         </p>
@@ -35,13 +36,20 @@ export default function PagesTab({ tenantId }: PagesTabProps) {
 
             {/* Pages Sub-Tabs */}
             <Tabs defaultValue="home" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-5 h-auto bg-gray-100 rounded-xl p-1">
+                <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 h-auto bg-gray-100 rounded-xl p-1">
                     <TabsTrigger
                         value="home"
                         className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2 py-3"
                     >
                         <Home className="h-4 w-4" />
                         <span className="hidden sm:inline">Home</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="services"
+                        className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2 py-3"
+                    >
+                        <Layout className="h-4 w-4" />
+                        <span className="hidden sm:inline">Services</span>
                     </TabsTrigger>
                     <TabsTrigger
                         value="portfolio"
@@ -75,6 +83,10 @@ export default function PagesTab({ tenantId }: PagesTabProps) {
 
                 <TabsContent value="home">
                     <HomePageEditor tenantId={tenantId} />
+                </TabsContent>
+
+                <TabsContent value="services">
+                    <ServicesPageEditor tenantId={tenantId} />
                 </TabsContent>
 
                 <TabsContent value="portfolio">

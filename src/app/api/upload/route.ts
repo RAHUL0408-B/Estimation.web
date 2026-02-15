@@ -1,7 +1,6 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export async function POST(req: NextRequest) {
     try {
@@ -23,26 +22,31 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 });
         }
 
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = `${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+        // Generate a unique filename
+        const extension = file.name.split('.').pop();
+        const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
 
-        // Create directory structure: public/uploads/[tenantId]/[folder]
-        const uploadDir = path.join(process.cwd(), "public", "uploads", tenantId, folder);
+        // Define storage path: tenants/[tenantId]/[folder]/[filename]
+        const storagePath = `tenants/${tenantId}/${folder}/${filename}`;
+        const storageRef = ref(storage, storagePath);
 
-        try {
-            await mkdir(uploadDir, { recursive: true });
-        } catch (error) {
-            console.error("Error creating directory:", error);
-        }
+        // Convert File to ArrayBuffer for Firebase
+        const arrayBuffer = await file.arrayBuffer();
 
-        const filepath = path.join(uploadDir, filename);
-        await writeFile(filepath, buffer);
+        // Upload to Firebase Storage
+        const snapshot = await uploadBytes(storageRef, arrayBuffer, {
+            contentType: file.type,
+        });
 
-        const url = `/uploads/${tenantId}/${folder}/${filename}`;
+        // Get the permanent download URL
+        const url = await getDownloadURL(snapshot.ref);
 
         return NextResponse.json({ url });
     } catch (error) {
         console.error("Upload error:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({
+            error: "Internal server error",
+            details: error instanceof Error ? error.message : String(error)
+        }, { status: 500 });
     }
 }

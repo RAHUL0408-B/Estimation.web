@@ -20,6 +20,7 @@ export interface WebsiteConfig {
     footerText: string;
     accentColor?: string;
     buttonRadius?: number;
+    backgroundColor?: string;
     fontStyle?: "modern" | "elegant" | "minimal";
     updatedAt?: any;
 }
@@ -37,6 +38,7 @@ const defaultConfig: WebsiteConfig = {
     heroHeading: "Design your dream home with perfection.",
     heroSubheading: "From modular kitchens to complete home renovations, we bring luxury and functionality together.",
     footerText: "Transforming spaces into dreams.",
+    backgroundColor: "#ffffff",
 };
 
 export function useWebsiteConfig(tenantId: string | null) {
@@ -156,7 +158,7 @@ export function usePublicWebsiteConfig(storeSlug: string) {
                     clearTimeout(timeoutId);
                     return;
                 }
-                const tenant = await getTenantByStoreId(storeSlug);
+                const tenant = await getTenantByStoreId(storeSlug.toLowerCase()) || await getTenantByStoreId(storeSlug);
                 if (tenant) {
                     setTenantId(tenant.id);
                 } else {
@@ -178,44 +180,54 @@ export function usePublicWebsiteConfig(storeSlug: string) {
         return () => clearTimeout(timeoutId);
     }, [storeSlug]);
 
-    // Real-time config listener
+    // Real-time config listener (Merged from brand and theme)
     useEffect(() => {
         if (!tenantId || !db) {
             if (!db && tenantId) console.warn("Firestore not initialized. Skipping public config listener.");
             return;
         }
 
-        const configRef = doc(db, "tenants", tenantId, "websiteConfig", "settings");
+        let brandData = {};
+        let themeData = {};
 
-        // Timeout in case snapshot never arrives
-        const timeoutId = setTimeout(() => {
-            console.warn(`Timeout fetching config for tenant: ${tenantId}. Using defaults.`);
-            setConfig(defaultConfig);
+        const brandRef = doc(db, "tenants", tenantId, "brand", "config");
+        const themeRef = doc(db, "tenants", tenantId, "theme", "config");
+
+        const updateConfig = () => {
+            setConfig({
+                ...defaultConfig,
+                ...brandData,
+                ...themeData,
+            } as WebsiteConfig);
             setLoading(false);
-        }, 2000); // 2 second timeout
+        };
 
-        const unsubscribe = onSnapshot(
-            configRef,
-            (snapshot) => {
-                clearTimeout(timeoutId);
-                if (snapshot.exists()) {
-                    setConfig({ ...defaultConfig, ...snapshot.data() } as WebsiteConfig);
-                } else {
-                    setConfig(defaultConfig);
-                }
-                setLoading(false);
-            },
-            (error) => {
-                clearTimeout(timeoutId);
-                console.error("Error fetching public config:", error);
+        const timeoutId = setTimeout(() => {
+            if (loading) {
+                console.warn(`Timeout fetching config for tenant: ${tenantId}. Using defaults.`);
                 setConfig(defaultConfig);
                 setLoading(false);
             }
-        );
+        }, 3000);
+
+        const unsubBrand = onSnapshot(brandRef, (snapshot) => {
+            if (snapshot.exists()) {
+                brandData = snapshot.data();
+                updateConfig();
+            }
+        });
+
+        const unsubTheme = onSnapshot(themeRef, (snapshot) => {
+            if (snapshot.exists()) {
+                themeData = snapshot.data();
+                updateConfig();
+            }
+        });
 
         return () => {
+            unsubBrand();
+            unsubTheme();
             clearTimeout(timeoutId);
-            unsubscribe();
         };
     }, [tenantId]);
 

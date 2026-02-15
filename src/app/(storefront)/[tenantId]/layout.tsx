@@ -16,15 +16,8 @@ export default function StorefrontLayout({
     const { tenantId } = use(params);
 
     const { config, loading } = usePublicWebsiteConfig(tenantId);
+
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-    const brandName = config?.headerTitle || config?.brandName || tenantId;
-    const phone = config?.phone;
-    const email = config?.email;
-    const primaryColor = config?.primaryColor || "#ea580c";
-    const secondaryColor = config?.secondaryColor || "#1c1917";
-    const footerText = config?.footerText || "Transforming spaces into dreams.";
-
     const [scrolled, setScrolled] = useState(false);
 
     useEffect(() => {
@@ -38,7 +31,9 @@ export default function StorefrontLayout({
     // Dynamically inject favicon
     // Inject CSS variables for theme
     useEffect(() => {
-        if (config?.faviconUrl) {
+        if (!config) return;
+
+        if (config.faviconUrl) {
             // Remove existing favicon links
             const existingFavicons = document.querySelectorAll("link[rel*='icon']");
             existingFavicons.forEach(link => link.remove());
@@ -51,22 +46,42 @@ export default function StorefrontLayout({
         }
 
         // Inject theme CSS variables
-        if (config) {
-            document.documentElement.style.setProperty('--primary', config.primaryColor || primaryColor);
-            document.documentElement.style.setProperty('--secondary', config.secondaryColor || secondaryColor);
-            document.documentElement.style.setProperty('--accent', config.accentColor || '#6366f1'); // Default accent
-            document.documentElement.style.setProperty('--button-radius', `${config.buttonRadius || 8}px`); // Default button radius
+        document.documentElement.style.setProperty('--primary', config.primaryColor || "#ea580c");
+        document.documentElement.style.setProperty('--secondary', config.secondaryColor || "#1c1917");
+        document.documentElement.style.setProperty('--accent', config.accentColor || '#6366f1'); // Default accent
+        document.documentElement.style.setProperty('--button-radius', `${config.buttonRadius || 8}px`); // Default button radius
+        document.documentElement.style.setProperty('--background', config.backgroundColor || '#ffffff');
 
-            // Set font family based on fontStyle
-            let fontFamily = 'Inter, system-ui, sans-serif'; // default modern
-            if (config.fontStyle === 'elegant') {
-                fontFamily = 'Playfair Display, Georgia, serif';
-            } else if (config.fontStyle === 'minimal') {
-                fontFamily = 'Helvetica Neue, Arial, sans-serif';
-            }
-            document.documentElement.style.setProperty('--font-family', fontFamily);
+        // Set font family based on fontStyle
+        let fontFamily = 'Inter, system-ui, sans-serif'; // default modern
+        if (config.fontStyle === 'elegant') {
+            fontFamily = 'Playfair Display, Georgia, serif';
+        } else if (config.fontStyle === 'minimal') {
+            fontFamily = 'Helvetica Neue, Arial, sans-serif';
         }
-    }, [config?.faviconUrl, config]);
+        document.documentElement.style.setProperty('--font-family', fontFamily);
+    }, [config]);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+                <div className="h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="mt-4 text-gray-500 font-medium">Loading...</p>
+            </div>
+        );
+    }
+
+    // If config is null after loading (tenant not found), just render children (404 page)
+    if (!config) {
+        return <>{children}</>;
+    }
+
+    const brandName = config?.headerTitle || config?.brandName || tenantId;
+    const phone = config?.phone;
+    const email = config?.email;
+    const primaryColor = config?.primaryColor || "#ea580c";
+    const secondaryColor = config?.secondaryColor || "#1c1917";
+    const footerText = config?.footerText || "Transforming spaces into dreams.";
 
     // Show loading state only for initial load (first 2 seconds max)
     if (loading && !config) {
@@ -84,10 +99,11 @@ export default function StorefrontLayout({
     }
 
     return (
-        <div className="flex min-h-screen flex-col font-sans">
+        <div className="flex min-h-screen flex-col font-sans transition-colors duration-500" style={{ backgroundColor: config.backgroundColor || '#ffffff' }}>
             <header
-                className={`fixed top-0 z-50 w-full transition-all duration-300 ease-in-out bg-white shadow-md backdrop-blur-md border-b border-gray-100 ${scrolled ? "h-[60px]" : "h-[72px]"
+                className={`fixed top-0 z-50 w-full transition-all duration-300 ease-in-out shadow-md border-b border-gray-100 ${scrolled ? "h-[60px]" : "h-[72px]"
                     }`}
+                style={{ backgroundColor: `${config.backgroundColor || '#ffffff'}ee`, backdropFilter: 'blur(12px)' }}
             >
                 <div className="container mx-auto flex items-center justify-between px-6 md:px-12 h-full">
                     <Link href={`/${tenantId}`} className="flex items-center gap-3 group">
@@ -110,11 +126,12 @@ export default function StorefrontLayout({
                     {/* Desktop Navigation */}
                     <nav className="hidden md:flex items-center gap-8">
                         {[
-                            { name: "Home", href: `/${tenantId}` },
-                            { name: "Portfolio", href: `/${tenantId}/portfolio` },
-                            { name: "Testimonials", href: `/${tenantId}/testimonials` },
-                            { name: "About", href: `/${tenantId}/about` },
-                            { name: "Contact", href: `/${tenantId}/contact` },
+                            { name: "Home", href: `/${tenantId}#hero` },
+                            { name: "Services", href: `/${tenantId}#services` },
+                            { name: "Portfolio", href: `/${tenantId}#portfolio` },
+                            { name: "Testimonials", href: `/${tenantId}#testimonials` },
+                            { name: "About", href: `/${tenantId}#about` },
+                            { name: "Contact", href: `/${tenantId}#contact` },
                             { name: "Get Estimate", href: `/${tenantId}/estimate` },
                         ].map((link) => (
                             <Link
@@ -163,11 +180,13 @@ export default function StorefrontLayout({
                 >
                     <nav className="flex flex-col p-6 gap-4">
                         {[
-                            { name: "Home", href: `/${tenantId}` },
-                            { name: "Portfolio", href: `/${tenantId}/portfolio` },
-                            { name: "Testimonials", href: `/${tenantId}/testimonials` },
-                            { name: "About", href: `/${tenantId}/about` },
-                            { name: "Contact", href: `/${tenantId}/contact` },
+                            { name: "Home", href: `/${tenantId}#hero` },
+                            { name: "Services", href: `/${tenantId}#services` },
+                            { name: "Portfolio", href: `/${tenantId}#portfolio` },
+                            { name: "Testimonials", href: `/${tenantId}#testimonials` },
+                            { name: "About", href: `/${tenantId}#about` },
+                            { name: "Contact", href: `/${tenantId}#contact` },
+                            { name: "Get Estimate", href: `/${tenantId}/estimate` },
                         ].map((link) => (
                             <Link
                                 key={link.name}
@@ -196,7 +215,7 @@ export default function StorefrontLayout({
 
             <main className="flex-1 pt-[80px]">{children}</main>
 
-            <footer className="bg-gray-900 text-white pt-16 pb-8 border-t border-gray-800">
+            <footer className="pt-16 pb-8 border-t" style={{ backgroundColor: secondaryColor, borderColor: `${secondaryColor}20`, color: '#ffffff' }}>
                 <div className="container mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-4 gap-12">
                     <div className="md:col-span-1 space-y-6">
                         <div className="flex items-center gap-3">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -31,13 +32,31 @@ const SIDEBAR_ITEMS = [
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
-    const { tenant, logout } = useTenantAuth();
+    const { tenant, loading, isAuthenticated, logout } = useTenantAuth();
     const { brand } = useBrand(tenant?.id || "");
+
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            router.push("/login");
+        }
+    }, [loading, isAuthenticated, router]);
 
     const handleLogout = async () => {
         await logout();
         router.push("/login");
     };
+
+    if (loading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            </div>
+        );
+    }
+
+    if (!isAuthenticated) {
+        return null;
+    }
 
     return (
         <div className="flex min-h-screen bg-[#F8FAFC]">

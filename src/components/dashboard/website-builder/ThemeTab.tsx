@@ -32,6 +32,7 @@ export default function ThemeTab({ tenantId }: ThemeTabProps) {
         fontStyle: "modern" as "modern" | "elegant" | "minimal",
         buttonRadius: 8,
         cardShadow: true,
+        backgroundColor: "#ffffff",
     });
 
     useEffect(() => {
@@ -43,6 +44,7 @@ export default function ThemeTab({ tenantId }: ThemeTabProps) {
                 fontStyle: theme.fontStyle || "modern",
                 buttonRadius: theme.buttonRadius || 8,
                 cardShadow: theme.cardShadow ?? true,
+                backgroundColor: theme.backgroundColor || "#ffffff",
             });
         }
     }, [theme]);
@@ -161,6 +163,32 @@ export default function ThemeTab({ tenantId }: ThemeTabProps) {
                             />
                             <p className="text-xs text-gray-500">Used for highlights and badges</p>
                         </div>
+
+                        {/* Background Color */}
+                        <div className="space-y-3">
+                            <Label className="text-sm font-medium">Background Color</Label>
+                            <div className="flex gap-3">
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={formData.backgroundColor}
+                                        onChange={(e) => handleColorChange("backgroundColor", e.target.value)}
+                                        className="h-12 w-12 rounded-lg border-2 border-gray-200 cursor-pointer"
+                                    />
+                                </div>
+                                <Input
+                                    value={formData.backgroundColor}
+                                    onChange={(e) => handleColorChange("backgroundColor", e.target.value)}
+                                    className="font-mono uppercase h-12 rounded-lg"
+                                    placeholder="#ffffff"
+                                />
+                            </div>
+                            <div
+                                className="h-16 rounded-lg border-2 border-gray-200"
+                                style={{ backgroundColor: formData.backgroundColor }}
+                            />
+                            <p className="text-xs text-gray-500">The main background color of your website</p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -250,9 +278,9 @@ export default function ThemeTab({ tenantId }: ThemeTabProps) {
                     <CardTitle className="text-xl">Preview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-4 p-6 rounded-2xl border border-gray-100" style={{ backgroundColor: formData.backgroundColor }}>
                         <div
-                            className="p-8 rounded-xl text-white"
+                            className="p-8 rounded-xl text-white shadow-sm"
                             style={{ backgroundColor: formData.secondaryColor }}
                         >
                             <h3 className="text-2xl font-bold mb-2">Sample Heading</h3>

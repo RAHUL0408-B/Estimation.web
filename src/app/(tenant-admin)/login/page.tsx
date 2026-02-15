@@ -89,11 +89,11 @@ export default function TenantLoginPage() {
                             {loading ? "Signing in..." : "Sign In"}
                         </Button>
                     </form>
-                    <div className="mt-4 text-center text-sm">
+                    <div className="mt-6 pt-4 border-t border-gray-100 text-center text-sm">
                         <p className="text-muted-foreground">
                             Don't have an account?{" "}
                             <Link href="/signup" className="text-primary hover:underline font-medium">
-                                Create Account
+                                Create Designer Account
                             </Link>
                         </p>
                     </div>

@@ -162,6 +162,7 @@ export async function addDesigner(designerData: {
     businessName: string;
     storeId: string;
     plan: "free" | "basic" | "pro" | "enterprise";
+    status?: "active" | "pending" | "inactive";
 }): Promise<void> {
     if (!db) throw new Error("Firestore not initialized");
     const tenantsRef = collection(db, "tenants");
@@ -189,7 +190,7 @@ export async function addDesigner(designerData: {
         phone: designerData.phone || "",
         businessName: designerData.businessName,
         storeId: uniqueStoreId,
-        status: "pending",
+        status: designerData.status || "pending",
         createdAt: serverTimestamp(),
         subscription: {
             plan: designerData.plan,
@@ -207,7 +208,7 @@ export async function addDesigner(designerData: {
     await createActivity(
         "signup",
         `New designer signup: ${designerData.name}`,
-        { email: designerData.email, storeId: uniqueStoreId }
+        { email: designerData.email, storeId: uniqueStoreId, status: designerData.status || "pending" }
     );
 }
 

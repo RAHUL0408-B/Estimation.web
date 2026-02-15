@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { Loader2 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { getTenantByStoreId } from "@/lib/firestoreHelpers";
 import type { PortfolioProject, ThemeConfig } from "@/types/website";
 
@@ -18,7 +18,9 @@ export default function PortfolioPage({ params }: { params: Promise<{ tenantId: 
 
     useEffect(() => {
         let isMounted = true;
-        const loadData = async () => {
+        let unsubs: (() => void)[] = [];
+
+        const setupListeners = async () => {
             if (!storeSlug) {
                 if (isMounted) setLoading(false);
                 return;
@@ -32,31 +34,40 @@ export default function PortfolioPage({ params }: { params: Promise<{ tenantId: 
                 }
 
                 if (isMounted) {
-                    // Load theme
-                    const themeDoc = await getDoc(doc(db, "tenants", tenant.id, "theme", "config"));
-                    if (themeDoc.exists()) {
-                        setTheme(themeDoc.data() as ThemeConfig);
-                    }
+                    // 1. Listen to Theme
+                    const themeUnsub = onSnapshot(doc(db, "tenants", tenant.id, "theme", "config"), (doc) => {
+                        if (isMounted && doc.exists()) {
+                            setTheme(doc.data() as ThemeConfig);
+                        }
+                    });
+                    unsubs.push(themeUnsub);
 
-                    // Load portfolio projects
+                    // 2. Listen to Projects
                     const projectsRef = collection(db, "tenants", tenant.id, "pages", "portfolio", "projects");
                     const q = query(projectsRef, orderBy("order", "asc"));
-                    const snapshot = await getDocs(q);
-                    const projectsData = snapshot.docs.map((doc) => ({
-                        id: doc.id,
-                        ...doc.data(),
-                    })) as PortfolioProject[];
-                    setProjects(projectsData);
+                    const projectsUnsub = onSnapshot(q, (snapshot) => {
+                        const projectsData = snapshot.docs.map((doc) => ({
+                            id: doc.id,
+                            ...doc.data(),
+                        })) as PortfolioProject[];
+                        if (isMounted) {
+                            setProjects(projectsData);
+                            setLoading(false);
+                        }
+                    });
+                    unsubs.push(projectsUnsub);
                 }
             } catch (error) {
-                console.error("Error loading portfolio:", error);
-            } finally {
+                console.error("Error setting up portfolio listeners:", error);
                 if (isMounted) setLoading(false);
             }
         };
 
-        loadData();
-        return () => { isMounted = false; };
+        setupListeners();
+        return () => {
+            isMounted = false;
+            unsubs.forEach(unsub => unsub());
+        };
     }, [storeSlug]);
 
     if (loading) {

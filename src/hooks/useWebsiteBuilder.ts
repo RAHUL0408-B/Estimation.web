@@ -305,10 +305,11 @@ export function useHomePage(tenantId: string | null) {
     const addHeroSlide = async (slide: Omit<HeroSlide, "id" | "order">): Promise<boolean> => {
         if (!homeContent) return false;
 
+        const slides = homeContent.heroSlides || [];
         const newSlide: HeroSlide = {
             ...slide,
             id: `slide_${Date.now()}`,
-            order: homeContent.heroSlides.length,
+            order: slides.length,
             primaryButtonText: slide.primaryButtonText || "Get Estimate",
             primaryButtonLink: slide.primaryButtonLink || "/estimate",
             secondaryButtonText: slide.secondaryButtonText || "Book Consultation",
@@ -316,7 +317,7 @@ export function useHomePage(tenantId: string | null) {
         };
 
         return saveHomeContent({
-            heroSlides: [...homeContent.heroSlides, newSlide],
+            heroSlides: [...slides, newSlide],
         });
     };
 
@@ -326,7 +327,8 @@ export function useHomePage(tenantId: string | null) {
     ): Promise<boolean> => {
         if (!homeContent) return false;
 
-        const updatedSlides = homeContent.heroSlides.map((s) =>
+        const slides = homeContent.heroSlides || [];
+        const updatedSlides = slides.map((s) =>
             s.id === slideId ? { ...s, ...updates } : s
         );
 
@@ -336,7 +338,8 @@ export function useHomePage(tenantId: string | null) {
     const deleteHeroSlide = async (slideId: string): Promise<boolean> => {
         if (!homeContent) return false;
 
-        const updatedSlides = homeContent.heroSlides.filter((s) => s.id !== slideId);
+        const slides = homeContent.heroSlides || [];
+        const updatedSlides = slides.filter((s) => s.id !== slideId);
         return saveHomeContent({ heroSlides: updatedSlides });
     };
 
@@ -352,14 +355,15 @@ export function useHomePage(tenantId: string | null) {
     const addService = async (service: Omit<Service, "id" | "order">): Promise<boolean> => {
         if (!homeContent) return false;
 
+        const services = homeContent.services || [];
         const newService: Service = {
             ...service,
             id: `service_${Date.now()}`,
-            order: homeContent.services.length,
+            order: services.length,
         };
 
         return saveHomeContent({
-            services: [...homeContent.services, newService],
+            services: [...services, newService],
         });
     };
 
@@ -369,7 +373,8 @@ export function useHomePage(tenantId: string | null) {
     ): Promise<boolean> => {
         if (!homeContent) return false;
 
-        const updatedServices = homeContent.services.map((s) =>
+        const services = homeContent.services || [];
+        const updatedServices = services.map((s) =>
             s.id === serviceId ? { ...s, ...updates } : s
         );
 
@@ -379,7 +384,8 @@ export function useHomePage(tenantId: string | null) {
     const deleteService = async (serviceId: string): Promise<boolean> => {
         if (!homeContent) return false;
 
-        const updatedServices = homeContent.services.filter((s) => s.id !== serviceId);
+        const services = homeContent.services || [];
+        const updatedServices = services.filter((s) => s.id !== serviceId);
         return saveHomeContent({ services: updatedServices });
     };
 
@@ -389,14 +395,15 @@ export function useHomePage(tenantId: string | null) {
     ): Promise<boolean> => {
         if (!homeContent) return false;
 
+        const items = homeContent.whyChooseUs || [];
         const newItem: WhyChooseUsItem = {
             ...item,
             id: `why_${Date.now()}`,
-            order: homeContent.whyChooseUs.length,
+            order: items.length,
         };
 
         return saveHomeContent({
-            whyChooseUs: [...homeContent.whyChooseUs, newItem],
+            whyChooseUs: [...items, newItem],
         });
     };
 
@@ -406,7 +413,8 @@ export function useHomePage(tenantId: string | null) {
     ): Promise<boolean> => {
         if (!homeContent) return false;
 
-        const updatedItems = homeContent.whyChooseUs.map((item) =>
+        const items = homeContent.whyChooseUs || [];
+        const updatedItems = items.map((item) =>
             item.id === itemId ? { ...item, ...updates } : item
         );
 
@@ -416,7 +424,8 @@ export function useHomePage(tenantId: string | null) {
     const deleteWhyChooseUs = async (itemId: string): Promise<boolean> => {
         if (!homeContent) return false;
 
-        const updatedItems = homeContent.whyChooseUs.filter((item) => item.id !== itemId);
+        const items = homeContent.whyChooseUs || [];
+        const updatedItems = items.filter((item) => item.id !== itemId);
         return saveHomeContent({ whyChooseUs: updatedItems });
     };
 

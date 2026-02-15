@@ -23,6 +23,7 @@ export interface ThemeConfig {
     fontStyle: "modern" | "elegant" | "minimal";
     buttonRadius: number; // in pixels
     cardShadow: boolean;
+    backgroundColor?: string;
     updatedAt?: any;
 }
 

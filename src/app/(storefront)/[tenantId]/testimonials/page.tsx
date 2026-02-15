@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { Loader2, Star, Quote } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { getTenantByStoreId } from "@/lib/firestoreHelpers";
 import type { Testimonial, ThemeConfig } from "@/types/website";
 
@@ -16,7 +16,9 @@ export default function TestimonialsPage({ params }: { params: Promise<{ tenantI
 
     useEffect(() => {
         let isMounted = true;
-        const loadData = async () => {
+        let unsubs: (() => void)[] = [];
+
+        const setupListeners = async () => {
             if (!storeSlug) {
                 if (isMounted) setLoading(false);
                 return;
@@ -30,29 +32,40 @@ export default function TestimonialsPage({ params }: { params: Promise<{ tenantI
                 }
 
                 if (isMounted) {
-                    const themeDoc = await getDoc(doc(db, "tenants", tenant.id, "theme", "config"));
-                    if (themeDoc.exists()) {
-                        setTheme(themeDoc.data() as ThemeConfig);
-                    }
+                    // 1. Listen to Theme
+                    const themeUnsub = onSnapshot(doc(db, "tenants", tenant.id, "theme", "config"), (doc) => {
+                        if (isMounted && doc.exists()) {
+                            setTheme(doc.data() as ThemeConfig);
+                        }
+                    });
+                    unsubs.push(themeUnsub);
 
+                    // 2. Listen to Testimonials
                     const testimonialsRef = collection(db, "tenants", tenant.id, "pages", "testimonials", "items");
                     const q = query(testimonialsRef, orderBy("order", "asc"));
-                    const snapshot = await getDocs(q);
-                    const testimonialsData = snapshot.docs.map((doc) => ({
-                        id: doc.id,
-                        ...doc.data(),
-                    })) as Testimonial[];
-                    setTestimonials(testimonialsData);
+                    const testimonialsUnsub = onSnapshot(q, (snapshot) => {
+                        const testimonialsData = snapshot.docs.map((doc) => ({
+                            id: doc.id,
+                            ...doc.data(),
+                        })) as Testimonial[];
+                        if (isMounted) {
+                            setTestimonials(testimonialsData);
+                            setLoading(false);
+                        }
+                    });
+                    unsubs.push(testimonialsUnsub);
                 }
             } catch (error) {
-                console.error("Error loading testimonials:", error);
-            } finally {
+                console.error("Error setting up testimonials listeners:", error);
                 if (isMounted) setLoading(false);
             }
         };
 
-        loadData();
-        return () => { isMounted = false; };
+        setupListeners();
+        return () => {
+            isMounted = false;
+            unsubs.forEach(unsub => unsub());
+        };
     }, [storeSlug]);
 
     if (loading) {
