@@ -61,6 +61,50 @@ service cloud.firestore {
 
       // Super admins can create new tenants (during signup)
       allow create: if isAuthenticated();
+      
+      // ========================================
+      // Tenant Subcollections
+      // ========================================
+      
+      // Brand & Theme Configs
+      match /brand/config {
+        allow read: if true;
+        allow write: if isTenantOwner(tenantId);
+      }
+      match /theme/config {
+        allow read: if true;
+        allow write: if isTenantOwner(tenantId);
+      }
+
+      // Page Content
+      match /pages/{pageId} {
+        allow read: if true;
+        allow write: if isTenantOwner(tenantId);
+        
+        // Nested collections within pages (e.g. portfolio projects)
+        match /projects/{projectId} {
+             allow read: if true;
+             allow write: if isTenantOwner(tenantId);
+        }
+        match /items/{itemId} {
+             allow read: if true;
+             allow write: if isTenantOwner(tenantId);
+        }
+      }
+
+      // Website Config
+      match /websiteConfig/settings {
+        allow read: if true;
+        allow write: if isTenantOwner(tenantId);
+      }
+
+      // Estimates (Subcollection version)
+      match /estimates/{estimateId} {
+        // Tenant owners can read/write their own estimates
+        allow read, write: if isTenantOwner(tenantId);
+        // Customers/Creators can read their own
+        allow read: if isAuthenticated() && resource.data.createdByUserId == request.auth.uid;
+      }
     }
 
     // ========================================

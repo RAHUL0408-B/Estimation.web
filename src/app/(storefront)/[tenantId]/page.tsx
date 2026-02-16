@@ -505,16 +505,40 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
                         <div className="relative h-[400px] md:h-auto">
                             {contactContent?.googleMapEmbedLink ? (
-                                <iframe
-                                    src={contactContent.googleMapEmbedLink.includes("<iframe")
-                                        ? contactContent.googleMapEmbedLink.match(/src="([^"]+)"/)?.[1] || ""
-                                        : contactContent.googleMapEmbedLink
+                                (() => {
+                                    // Security: Extract and validate src from iframe string or raw URL
+                                    let src = contactContent.googleMapEmbedLink;
+                                    if (src.includes("<iframe")) {
+                                        src = src.match(/src="([^"]+)"/)?.[1] || "";
                                     }
-                                    className="absolute inset-0 w-full h-full grayscale opacity-80"
-                                    style={{ border: 0 }}
-                                    allowFullScreen
-                                    loading="lazy"
-                                />
+
+                                    // Whitelist trusted domains for iframes
+                                    const isTrustedDomain = src.startsWith("https://www.google.com/maps/embed") ||
+                                        src.startsWith("https://maps.google.com/maps");
+
+                                    if (!isTrustedDomain) {
+                                        return (
+                                            <div className="absolute inset-0 bg-gray-100 flex flex-col items-center justify-center p-6 text-center">
+                                                <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mb-3">
+                                                    <Layout className="h-6 w-6 text-red-500" />
+                                                </div>
+                                                <p className="text-gray-500 text-sm">Map unavailable due to security restrictions.</p>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <iframe
+                                            src={src}
+                                            className="absolute inset-0 w-full h-full grayscale opacity-80"
+                                            style={{ border: 0 }}
+                                            allowFullScreen
+                                            loading="lazy"
+                                            referrerPolicy="no-referrer-when-downgrade"
+                                            title="Office Location"
+                                        />
+                                    );
+                                })()
                             ) : (
                                 <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
                                     <CheckCircle className="h-20 w-20 text-gray-300" />
