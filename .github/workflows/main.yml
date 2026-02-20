@@ -39,7 +39,7 @@ jobs:
           cp frontend/next.config.ts deploy_package/
           cp frontend/server.js deploy_package/
 
-      - name: Deploy to Server via FTP
+      - name: Deploy to Hostingial via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -47,6 +47,9 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy_package/
           server-dir: repositories/Estimation.webb/frontend/ # Make sure this matches your actual path on server
+          protocol: ftps
+          port: 21
+          security: loose
           exclude: |
             **/.git*
             **/node_modules/**
