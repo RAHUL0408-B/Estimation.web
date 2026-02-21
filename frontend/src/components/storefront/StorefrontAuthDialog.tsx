@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
-
 import { useRouter } from "next/navigation";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface StorefrontAuthDialogProps {
     open: boolean;
@@ -40,43 +41,63 @@ export function StorefrontAuthDialog({
         }
     }, [open, defaultTab]);
 
+    const { loginWithEmail, signupWithEmail } = useCustomerAuth();
+    const { toast } = useToast();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
-        // Simulate authentication
-        // In a real app, this would verify credentials with Firebase Auth
+        const formData = new FormData(e.target as HTMLFormElement);
+        const email = (formData.get("email") || formData.get("signup-email")) as string;
+        const password = (formData.get("password") || formData.get("signup-password")) as string;
+        const firstName = formData.get("firstName") as string;
+        const lastName = formData.get("lastName") as string;
+        const phone = formData.get("phone") as string;
 
-        setTimeout(() => {
-            // Get form values using FormData to be generic across tabs
-            const formData = new FormData(e.target as HTMLFormElement);
-            const email = formData.get("email") as string || formData.get("signup-email") as string;
-            const name = (formData.get("firstName") as string)
-                ? `${formData.get("firstName")} ${formData.get("lastName")}`
-                : "User";
-
-            if (email) {
-                // Save user session to localStorage
-                const userSession = {
-                    email,
-                    name,
-                    isLoggedIn: true,
-                    loginTime: new Date().toISOString()
-                };
-                localStorage.setItem(`storefront_user_${tenantId}`, JSON.stringify(userSession));
-
-                // Trigger an event so hooks can update immediately (optional but good practice)
-                window.dispatchEvent(new Event("storage"));
+        try {
+            if (activeTab === "login") {
+                await loginWithEmail(email, password);
+                toast({ title: "Success", description: "Logged in successfully." });
+            } else {
+                await signupWithEmail(email, password, `${firstName} ${lastName}`, phone || "", tenantId);
+                toast({ title: "Success", description: "Account created successfully." });
             }
 
-            setIsLoading(false);
+            // Sync legacy simulated session for backward compatibility in components using it
+            const userSession = {
+                email,
+                name: activeTab === "login" ? "User" : `${firstName} ${lastName}`,
+                isLoggedIn: true,
+                loginTime: new Date().toISOString()
+            };
+            localStorage.setItem(`storefront_user_${tenantId}`, JSON.stringify(userSession));
+            window.dispatchEvent(new Event("storage"));
+
             onOpenChange(false);
-            router.push(`/${tenantId}/dashboard`);
-        }, 1500);
+
+            // If there's a returnUrl in searchParams, we might want to stay there
+            // But usually the hooks handle state change and UI proceeds
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnUrl = urlParams.get("returnUrl");
+            if (returnUrl) {
+                router.push(returnUrl + (returnUrl.includes("?") ? "&" : "?") + "autoSubmit=true");
+            } else {
+                router.push(`/${tenantId}/dashboard`);
+            }
+        } catch (error: any) {
+            console.error("Auth error:", error);
+            toast({
+                title: "Authentication Failed",
+                description: error.message || "Please check your credentials and try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     const handleForgotPassword = () => {
-        // TODO: Implement forgot password logic
         alert("Forgot password functionality would open here.");
     }
 
@@ -142,6 +163,10 @@ export function StorefrontAuthDialog({
                             <div className="space-y-2">
                                 <Label htmlFor="signup-email">Email</Label>
                                 <Input id="signup-email" name="signup-email" type="email" placeholder="name@example.com" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Phone Number</Label>
+                                <Input id="phone" name="phone" placeholder="+91 XXXXX XXXXX" required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="signup-password">Password</Label>

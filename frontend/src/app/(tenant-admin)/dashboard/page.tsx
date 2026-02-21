@@ -21,7 +21,8 @@ import {
     Layers,
     IndianRupee,
     CheckCircle,
-    XCircle
+    XCircle,
+    Hammer
 } from "lucide-react";
 import { useTenantAuth } from "@/hooks/useTenantAuth";
 import { useTenantDashboard, RecentOrder } from "@/hooks/useTenantDashboard";
@@ -148,17 +149,19 @@ export default function TenantDashboardPage() {
 
             {/* Summary Cards */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="border-none shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            Total Estimates
-                        </CardTitle>
-                        <FileText className="h-5 w-5 text-gray-300" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-[#0F172A]">{stats.estimatesCount}</div>
-                    </CardContent>
-                </Card>
+                <Link href="/dashboard/projects" className="block">
+                    <Card className="border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-emerald-50/50">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                                Active Projects
+                            </CardTitle>
+                            <Hammer className="h-5 w-5 text-emerald-400" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-4xl font-bold text-emerald-900">{stats.activeProjectsCount}</div>
+                        </CardContent>
+                    </Card>
+                </Link>
 
                 <Card className="border-none shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -237,6 +240,12 @@ export default function TenantDashboardPage() {
                     <Button variant="outline" size="sm" className="gap-2">
                         <List className="h-4 w-4" />
                         View All Orders
+                    </Button>
+                </Link>
+                <Link href="/dashboard/projects">
+                    <Button variant="outline" size="sm" className="gap-2 bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100">
+                        <Hammer className="h-4 w-4" />
+                        Active Projects
                     </Button>
                 </Link>
                 <Link href="/dashboard/pricing">

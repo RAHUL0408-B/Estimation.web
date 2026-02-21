@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from "firebase/auth";
 import { getTenantByEmail, Tenant } from "@/lib/firestoreHelpers";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 
 // Cache tenant data to prevent re-fetching on every render
 const tenantCache: { [email: string]: { data: Tenant; timestamp: number } } = {};
@@ -119,15 +119,24 @@ export function useTenantAuth() {
 
             // Sync to 'users' collection (New requirement)
             try {
+                // Ensure the tenant document has the correct ownerUid if missing
+                // This is crucial for Firestore security rules to allow writes to subcollections
+                if (tenantData.id && !tenantData.ownerUid) {
+                    await updateDoc(doc(db, "tenants", tenantData.id), {
+                        ownerUid: userCredential.user.uid
+                    });
+                    tenantData.ownerUid = userCredential.user.uid;
+                }
+
                 await setDoc(doc(db, "users", userCredential.user.uid), {
                     uid: userCredential.user.uid,
                     email: email,
                     role: "admin",
-                    tenantId: userCredential.user.uid, // Admins are their own tenants
+                    tenantId: tenantData.id, // Fixed: use the actual tenant ID, not UID
                     lastLogin: serverTimestamp()
                 }, { merge: true });
             } catch (e) {
-                console.error("Failed to sync admin user:", e);
+                console.error("Failed to sync admin user or update ownerUid:", e);
             }
 
             setLoading(false);

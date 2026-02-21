@@ -85,12 +85,15 @@ export default function TenantLoginPage() {
             } else {
                 setEmployeeError("Invalid credentials. Please check your email and password.");
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Employee login error:", error);
-            if (error instanceof Error && error.message.includes("index")) {
-                setEmployeeError("Database Index Missing. Open Console (F12) and click the Firebase link to create it.");
+            // Detect missing index error - usually contains a link to create it
+            if (error.message?.toLowerCase().includes("index") || error.code === "failed-precondition") {
+                setEmployeeError("Database Index Missing. Please check the browser console (F12) for a link to create the collection group index for 'employees'.");
+            } else if (error.code === "permission-denied") {
+                setEmployeeError("Permission Denied. Please ensure Firestore rules allow collection group queries on 'employees'.");
             } else {
-                setEmployeeError("Login failed. Please try again.");
+                setEmployeeError(`Login failed: ${error.message || "Unknown error"}. Please check your connection and try again.`);
             }
         } finally {
             setEmployeeLoading(false);

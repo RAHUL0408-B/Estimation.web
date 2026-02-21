@@ -37,6 +37,7 @@ export interface TenantDashboardStats {
     estimatesCount: number;
     ordersCount: number;
     pendingApprovalsCount: number;
+    activeProjectsCount: number;
     todayEstimatesCount: number;
     rejectedThisWeekCount: number;
     recentOrders: RecentOrder[];
@@ -58,6 +59,7 @@ export function useTenantDashboard(tenantId: string | null) {
         estimatesCount: 0,
         ordersCount: 0,
         pendingApprovalsCount: 0,
+        activeProjectsCount: 0,
         todayEstimatesCount: 0,
         rejectedThisWeekCount: 0,
         recentOrders: [],
@@ -87,29 +89,16 @@ export function useTenantDashboard(tenantId: string | null) {
                 const weekTimestamp = Timestamp.fromDate(startOfWeek);
 
                 const [
-                    estimatesSnapshot,
-                    ordersSnapshot,
-                    pendingSnapshot,
-                    recentOrdersSnapshot
+                    estimatesSnapshot
                 ] = await Promise.all([
-                    getDocs(query(collection(db, "estimates"), where("tenantId", "==", tenantId))),
-                    getDocs(query(collection(db, "orders"), where("tenantId", "==", tenantId))),
-                    getDocs(query(
-                        collection(db, "orders"),
-                        where("tenantId", "==", tenantId),
-                        where("status", "==", "pending")
-                    )),
-                    getDocs(query(
-                        collection(db, "orders"),
-                        where("tenantId", "==", tenantId)
-                    ))
+                    getDocs(query(collection(db, "tenants", tenantId, "estimates")))
                 ]);
 
                 // Process orders for additional stats
-                const allOrders = recentOrdersSnapshot.docs.map(doc => ({
+                const allOrders = estimatesSnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
-                })) as RecentOrder[];
+                })) as any[];
 
                 // Sort by createdAt descending
                 allOrders.sort((a, b) => {
@@ -132,13 +121,18 @@ export function useTenantDashboard(tenantId: string | null) {
                 const rejectedThisWeekCount = allOrders.filter(order => {
                     if (!order.createdAt?.toMillis) return false;
                     return order.status === "rejected" &&
-                           order.createdAt.toMillis() >= weekTimestamp.toMillis();
+                        order.createdAt.toMillis() >= weekTimestamp.toMillis();
                 }).length;
 
+                // Calculate stats
+                const activeProjectsCount = allOrders.filter(o => (o as any).isProject === true || o.status === 'cracked').length;
+                const pendingApprovalsCount = allOrders.filter(o => o.status === "pending").length;
+
                 return {
-                    estimatesCount: estimatesSnapshot.size,
-                    ordersCount: ordersSnapshot.size,
-                    pendingApprovalsCount: pendingSnapshot.size,
+                    estimatesCount: allOrders.length,
+                    ordersCount: allOrders.length,
+                    pendingApprovalsCount,
+                    activeProjectsCount,
                     todayEstimatesCount,
                     rejectedThisWeekCount,
                     recentOrders
@@ -149,6 +143,7 @@ export function useTenantDashboard(tenantId: string | null) {
                     estimatesCount: 0,
                     ordersCount: 0,
                     pendingApprovalsCount: 0,
+                    activeProjectsCount: 0,
                     todayEstimatesCount: 0,
                     rejectedThisWeekCount: 0,
                     recentOrders: []
@@ -185,6 +180,7 @@ export function useTenantDashboard(tenantId: string | null) {
                 estimatesCount: extraData.estimatesCount,
                 ordersCount: extraData.ordersCount,
                 pendingApprovalsCount: extraData.pendingApprovalsCount,
+                activeProjectsCount: extraData.activeProjectsCount,
                 todayEstimatesCount: extraData.todayEstimatesCount,
                 rejectedThisWeekCount: extraData.rejectedThisWeekCount,
                 recentOrders: extraData.recentOrders,

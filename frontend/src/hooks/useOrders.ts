@@ -31,7 +31,7 @@ export interface Order {
     totalAmount?: number;
 
     // Legacy/Shared Fields
-    status?: "pending" | "approved" | "rejected" | "generated"; // We might need to add status to the new estimate creation
+    status?: "pending" | "approved" | "rejected" | "generated" | "cracked"; // We might need to add status to the new estimate creation
     createdAt?: any;
     tenantId: string;
     pdfUrl?: string;

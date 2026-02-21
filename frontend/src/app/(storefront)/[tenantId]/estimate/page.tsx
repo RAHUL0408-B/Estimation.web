@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, Loader2, CheckCircle2, Plus, Minus, Download, Home, Building2, ChevronRight, ArrowLeft, Menu, ArrowRight as ArrowForward, User, LayoutGrid, Calculator, ChevronDown } from "lucide-react";
+import { Check, Loader2, CheckCircle2, Plus, Minus, Download, Home, Building2, ChevronRight, ArrowLeft, Menu, ArrowRight as ArrowForward, User, LayoutGrid, Calculator, ChevronDown, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePricingConfig, PricingItem } from "@/hooks/usePricingConfig";
 import { useCities } from "@/hooks/useCities";
@@ -17,6 +17,7 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { getTenantByStoreId, Tenant } from "@/lib/firestoreHelpers";
 import { generateEstimatePDF } from "@/lib/generateEstimatePdf";
+import { useToast } from "@/hooks/use-toast";
 
 type Plan = 'Basic' | 'Standard' | 'Luxe';
 
@@ -106,7 +107,6 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
     const [cabinCount, setCabinCount] = useState(0);
     const [cabins, setCabins] = useState<BedroomConfig[]>([]);
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [estimatedTotal, setEstimatedTotal] = useState(0);
     const [breakdown, setBreakdown] = useState<any[]>([]);
 
@@ -403,34 +403,30 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
         return { total, breakdown };
     };
 
-    // Check local storage for simulated user
-    const [simulatedUser, setSimulatedUser] = useState<{ email: string; name: string } | null>(null);
-    useEffect(() => {
-        if (tenantSlug) {
-            const stored = localStorage.getItem(`storefront_user_${tenantSlug}`);
-            if (stored) {
-                try {
-                    setSimulatedUser(JSON.parse(stored));
-                } catch (e) {
-                    console.error("Failed to parse stored user", e);
-                }
-            }
-        }
-    }, [tenantSlug]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { toast } = useToast();
 
     const handleSubmit = async () => {
         // Validation
         if (!customerName || !customerPhone || !customerEmail || !selectedCity) {
-            alert("Please fill in all customer information fields");
+            toast({
+                title: "Information Required",
+                description: "Please fill in all customer information fields before submitting.",
+                variant: "destructive"
+            });
             return;
         }
         if (!carpetArea || parseFloat(carpetArea) <= 0) {
-            alert("Please enter a valid carpet area");
+            toast({
+                title: "Invalid Input",
+                description: "Please enter a valid carpet area.",
+                variant: "destructive"
+            });
             return;
         }
 
-        // Check if user is authenticated (Firebase Auth OR Simulated LocalAuth)
-        if (!customer && !isAdmin && !simulatedUser) {
+        // Check if user is authenticated via Firebase Auth
+        if (!customer && !isAdmin) {
             // User is not logged in - save form data to sessionStorage
             const formData = {
                 customerInfo: {
@@ -462,12 +458,12 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
             // Save to sessionStorage
             sessionStorage.setItem('pendingEstimate', JSON.stringify(formData));
 
-            // Redirect to dashboard (which handles auth if not logged in) or open auth dialog
-            // Since we can't easily open the dialog from here without context, and we don't have a dedicated login page,
-            // we will redirect to the dashboard which will prompt for login or show the user dashboard.
-            // A better UX would be to emit an event to open the dialog, but for now:
+            // Redirect to home with auth trigger
             const currentUrl = window.location.pathname;
-            // We can encode the return URL to handle post-login redirection if we improve the auth flow later
+            toast({
+                title: "Authentication Required",
+                description: "Please login to save and view your estimate breakdown.",
+            });
             router.push(`/${tenantSlug}?openAuth=true&returnUrl=${encodeURIComponent(currentUrl)}`);
             return;
         }
@@ -478,11 +474,10 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
         // User is logged in - proceed with submission
         setIsSubmitting(true);
 
-
         try {
-            const { total, breakdown } = calculateEstimate();
+            const { total, breakdown: estimateBreakdown } = calculateEstimate();
 
-            // Save to Firestore
+            // Save to Firestore - ensuring all fields expected by Admin Orders are present
             const estimateData = {
                 customerInfo: {
                     name: customerName,
@@ -490,6 +485,11 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                     email: customerEmail,
                     city: selectedCity
                 },
+                // Flatten fields for backward compatibility with orders list
+                clientName: customerName,
+                clientPhone: customerPhone,
+                clientEmail: customerEmail,
+
                 segment,
                 plan: selectedPlan,
                 carpetArea: parseFloat(carpetArea),
@@ -507,6 +507,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                     cabins: cabins
                 },
                 totalAmount: total,
+                status: "pending", // Default status for Orders page
                 tenantId: resolvedTenant?.id,
                 customerId: customer?.uid || null,
                 createdAt: serverTimestamp()
@@ -517,14 +518,23 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
 
             setCurrentEstimateId(docRef.id);
             setEstimatedTotal(total);
-            setBreakdown(breakdown);
+            setBreakdown(estimateBreakdown);
             setStep(6);
 
             // Clear sessionStorage if it exists
             sessionStorage.removeItem('pendingEstimate');
-        } catch (error) {
+
+            toast({
+                title: "Estimate Generated",
+                description: "Your estimate has been saved successfully.",
+            });
+        } catch (error: any) {
             console.error("Error submitting estimate:", error);
-            alert("Failed to submit estimate. Please try again.");
+            toast({
+                title: "Submission Failed",
+                description: `Error: ${error.message || "Unknown error"}. Please try again.`,
+                variant: "destructive"
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -626,32 +636,42 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
                                 </div>
                             )}
 
-                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                                <Button
-                                    onClick={handleDownloadPDF}
-                                    disabled={isGeneratingPDF}
-                                    className="flex-1 text-white py-7 text-lg shadow-lg hover:shadow-xl transition-all"
-                                    style={{ backgroundColor: primaryColor, borderRadius: buttonRadius }}
-                                >
-                                    {isGeneratingPDF ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                            Generating PDF...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Download className="mr-2 h-5 w-5" />
-                                            Download Breakdown PDF
-                                        </>
-                                    )}
-                                </Button>
+                            <div className="flex flex-col gap-4 pt-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Button
+                                        onClick={handleDownloadPDF}
+                                        disabled={isGeneratingPDF}
+                                        className="text-white py-7 text-lg shadow-lg hover:shadow-xl transition-all"
+                                        style={{ backgroundColor: primaryColor, borderRadius: buttonRadius }}
+                                    >
+                                        {isGeneratingPDF ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                                Generating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Download className="mr-2 h-5 w-5" />
+                                                Download PDF
+                                            </>
+                                        )}
+                                    </Button>
+                                    <Button
+                                        onClick={() => router.push(`/${tenantSlug}/book-consultation`)}
+                                        className="text-white py-7 text-lg shadow-lg hover:shadow-xl transition-all border-none"
+                                        style={{ backgroundColor: secondaryColor, borderRadius: buttonRadius }}
+                                    >
+                                        <Calendar className="mr-2 h-5 w-5" />
+                                        Book Consultation
+                                    </Button>
+                                </div>
                                 <Button
                                     onClick={() => router.push(`/${tenantSlug}`)}
                                     variant="outline"
-                                    className="flex-1 py-7 text-lg border-2 hover:bg-gray-50 transition-all"
+                                    className="py-6 text-lg border-2 hover:bg-gray-50 transition-all w-full"
                                     style={{ borderRadius: buttonRadius, borderColor: primaryColor, color: primaryColor }}
                                 >
-                                    Go Back Home
+                                    Return to Home
                                 </Button>
                             </div>
                         </CardContent>
