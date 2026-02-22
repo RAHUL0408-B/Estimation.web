@@ -35,6 +35,8 @@ export interface TenantDashboardStats {
         status: string;
     };
     estimatesCount: number;
+    estimatesThisMonthCount: number;
+    conversionRate: number;
     ordersCount: number;
     pendingApprovalsCount: number;
     activeProjectsCount: number;
@@ -57,6 +59,8 @@ export function useTenantDashboard(tenantId: string | null) {
             status: "active",
         },
         estimatesCount: 0,
+        estimatesThisMonthCount: 0,
+        conversionRate: 0,
         ordersCount: 0,
         pendingApprovalsCount: 0,
         activeProjectsCount: 0,
@@ -82,17 +86,17 @@ export function useTenantDashboard(tenantId: string | null) {
                 const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const todayTimestamp = Timestamp.fromDate(startOfToday);
 
+                // Get start of this month
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                const monthTimestamp = Timestamp.fromDate(startOfMonth);
+
                 // Get start of this week (Sunday)
                 const startOfWeek = new Date(now);
                 startOfWeek.setDate(now.getDate() - now.getDay());
                 startOfWeek.setHours(0, 0, 0, 0);
                 const weekTimestamp = Timestamp.fromDate(startOfWeek);
 
-                const [
-                    estimatesSnapshot
-                ] = await Promise.all([
-                    getDocs(query(collection(db, "tenants", tenantId, "estimates")))
-                ]);
+                const estimatesSnapshot = await getDocs(query(collection(db, "tenants", tenantId, "estimates")));
 
                 // Process orders for additional stats
                 const allOrders = estimatesSnapshot.docs.map(doc => ({
@@ -117,6 +121,12 @@ export function useTenantDashboard(tenantId: string | null) {
                     return order.createdAt.toMillis() >= todayTimestamp.toMillis();
                 }).length;
 
+                // Calculate estimates this month count
+                const estimatesThisMonthCount = allOrders.filter(order => {
+                    if (!order.createdAt?.toMillis) return false;
+                    return order.createdAt.toMillis() >= monthTimestamp.toMillis();
+                }).length;
+
                 // Calculate rejected this week count
                 const rejectedThisWeekCount = allOrders.filter(order => {
                     if (!order.createdAt?.toMillis) return false;
@@ -125,11 +135,17 @@ export function useTenantDashboard(tenantId: string | null) {
                 }).length;
 
                 // Calculate stats
-                const activeProjectsCount = allOrders.filter(o => (o as any).isProject === true || o.status === 'cracked').length;
+                const activeProjectsCount = allOrders.filter(o => o.isProject === true || o.status === 'cracked' || o.status === 'approved').length;
                 const pendingApprovalsCount = allOrders.filter(o => o.status === "pending").length;
+
+                // Calculate conversion rate
+                const approvedCount = allOrders.filter(o => o.status === "approved" || o.status === "cracked").length;
+                const conversionRate = allOrders.length > 0 ? (approvedCount / allOrders.length) * 100 : 0;
 
                 return {
                     estimatesCount: allOrders.length,
+                    estimatesThisMonthCount,
+                    conversionRate,
                     ordersCount: allOrders.length,
                     pendingApprovalsCount,
                     activeProjectsCount,
@@ -141,6 +157,8 @@ export function useTenantDashboard(tenantId: string | null) {
                 console.error("Error fetching dashboard data:", error);
                 return {
                     estimatesCount: 0,
+                    estimatesThisMonthCount: 0,
+                    conversionRate: 0,
                     ordersCount: 0,
                     pendingApprovalsCount: 0,
                     activeProjectsCount: 0,
@@ -178,6 +196,8 @@ export function useTenantDashboard(tenantId: string | null) {
                     status: data.subscription?.status || "active",
                 },
                 estimatesCount: extraData.estimatesCount,
+                estimatesThisMonthCount: extraData.estimatesThisMonthCount,
+                conversionRate: extraData.conversionRate,
                 ordersCount: extraData.ordersCount,
                 pendingApprovalsCount: extraData.pendingApprovalsCount,
                 activeProjectsCount: extraData.activeProjectsCount,

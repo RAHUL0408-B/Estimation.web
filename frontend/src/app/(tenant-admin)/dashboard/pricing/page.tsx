@@ -8,7 +8,8 @@ import {
     Pencil,
     GripVertical,
     ChevronUp,
-    ChevronDown
+    ChevronDown,
+    HelpCircle
 } from "lucide-react";
 import { useTenantAuth } from "@/hooks/useTenantAuth";
 import {
@@ -56,7 +57,8 @@ const CategoryCard = ({
     editingItemId, setEditingItemId, updateItem, toggleItem, deleteItem
 }: CategoryCardProps) => {
     return (
-        <div key={category.id} className="border rounded-xl p-6 space-y-6 hover:shadow-md transition-shadow group/card bg-white">
+        <div key={category.id} className="border border-slate-100 rounded-[32px] p-8 space-y-8 hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 group/card bg-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-10"></div>
             {/* Category Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -132,27 +134,32 @@ const CategoryCard = ({
 
             {/* Items Table */}
             {category.items.length > 0 ? (
-                <div className="overflow-hidden border rounded-lg">
+                <div className="overflow-hidden border border-slate-100 rounded-2xl bg-slate-50/30">
                     <table className="w-full border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 border-b">
-                                <th className="text-left p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[25%]">Item Name</th>
-                                <th className="text-center p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">Type</th>
-                                <th className="text-right p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Basic (₹)</th>
-                                <th className="text-right p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Standard (₹)</th>
-                                <th className="text-right p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Luxe (₹)</th>
-                                <th className="text-center p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[8%]">Status</th>
-                                <th className="text-center p-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%]">Actions</th>
+                            <tr className="border-b border-slate-100">
+                                <th className="text-left py-5 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[30%]">Item Name</th>
+                                <th className="text-center py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[12%]">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        Type
+                                        <HelpCircle className="h-3 w-3 text-slate-300" />
+                                    </div>
+                                </th>
+                                <th className="text-center py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[14%] bg-white/40">Basic Tier</th>
+                                <th className="text-center py-5 px-4 text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] w-[14%] bg-slate-900/5 ring-1 ring-slate-900/5">Standard Tier</th>
+                                <th className="text-center py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[14%] bg-white/40">Luxe Tier</th>
+                                <th className="text-center py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[8%]">Status</th>
+                                <th className="text-center py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[8%]">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100/50 bg-white">
                             {category.items.map((item) => (
-                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group/item">
-                                    <td className="p-4">
+                                <tr key={item.id} className="hover:bg-slate-50/80 transition-all group/item">
+                                    <td className="py-4 px-6">
                                         {editingItemId === item.id ? (
                                             <Input
                                                 autoFocus
-                                                className="h-8 text-sm"
+                                                className="h-9 text-sm rounded-lg border-slate-200 focus:border-slate-400 focus:ring-4 focus:ring-slate-100 transition-all font-medium"
                                                 defaultValue={item.name}
                                                 onBlur={(e) => {
                                                     updateItem(category.id, item.id, { name: e.target.value });
@@ -168,88 +175,96 @@ const CategoryCard = ({
                                                 }}
                                             />
                                         ) : (
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-semibold text-slate-700">{item.name}</span>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-bold text-slate-700 tracking-tight">{item.name}</span>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-6 w-6 opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-blue-600 transition-opacity"
+                                                    className="h-8 w-8 opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
                                                     onClick={() => setEditingItemId(item.id)}
                                                 >
-                                                    <Pencil className="h-3 w-3" />
+                                                    <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>
                                         )}
                                     </td>
-                                    <td className="p-4 text-center">
+                                    <td className="py-4 px-4">
                                         <Select
-                                            value={item.type}
-                                            onValueChange={(value: 'fixed' | 'perUnit' | 'perSqft') =>
+                                            value={item.type === 'perUnit' ? 'fixed' : item.type}
+                                            onValueChange={(value: 'fixed' | 'perSqft') =>
                                                 updateItem(category.id, item.id, { type: value })
                                             }
                                         >
-                                            <SelectTrigger className="w-full h-8 text-[11px] font-medium bg-white">
+                                            <SelectTrigger className="w-full h-9 text-[10px] font-black uppercase tracking-widest bg-slate-50/50 border-0 rounded-lg hover:bg-slate-100 transition-all">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="fixed">Fixed</SelectItem>
-                                                <SelectItem value="perUnit">Per Unit</SelectItem>
-                                                <SelectItem value="perSqft">Per Sqft</SelectItem>
+                                            <SelectContent className="rounded-xl border-slate-100 shadow-2xl">
+                                                <SelectItem value="fixed" className="text-[10px] font-black uppercase tracking-widest py-3">Fixed</SelectItem>
+                                                <SelectItem value="perSqft" className="text-[10px] font-black uppercase tracking-widest py-3">Per Sqft</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </td>
-                                    <td className="p-4 text-right">
-                                        <Input
-                                            type="number"
-                                            className="text-right h-8 w-full text-sm bg-white"
-                                            value={item.basicPrice}
-                                            onChange={(e) =>
-                                                updateItem(category.id, item.id, { basicPrice: parseInt(e.target.value) || 0 })
-                                            }
-                                        />
+                                    <td className="py-4 px-4 bg-slate-50/30">
+                                        <div className="relative group/price">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">₹</span>
+                                            <Input
+                                                type="number"
+                                                className="text-right h-10 w-full text-sm font-bold bg-white border-slate-100 rounded-xl pl-7 hover:border-slate-300 focus:border-slate-900 focus:ring-4 focus:ring-slate-100 transition-all tabular-nums"
+                                                value={item.basicPrice}
+                                                onChange={(e) =>
+                                                    updateItem(category.id, item.id, { basicPrice: parseInt(e.target.value) || 0 })
+                                                }
+                                            />
+                                        </div>
                                     </td>
-                                    <td className="p-4 text-right">
-                                        <Input
-                                            type="number"
-                                            className="text-right h-8 w-full text-sm font-medium bg-slate-50 border-slate-200"
-                                            value={item.standardPrice}
-                                            onChange={(e) =>
-                                                updateItem(category.id, item.id, { standardPrice: parseInt(e.target.value) || 0 })
-                                            }
-                                        />
+                                    <td className="py-4 px-4 bg-slate-900/[0.02]">
+                                        <div className="relative group/price">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-900/20 group-focus-within/price:text-slate-900">₹</span>
+                                            <Input
+                                                type="number"
+                                                className="text-right h-11 w-full text-base font-black bg-white border-2 border-slate-900/5 rounded-xl pl-8 shadow-sm hover:border-slate-900/20 focus:border-slate-900 focus:ring-8 focus:ring-slate-900/5 transition-all tabular-nums"
+                                                value={item.standardPrice}
+                                                onChange={(e) =>
+                                                    updateItem(category.id, item.id, { standardPrice: parseInt(e.target.value) || 0 })
+                                                }
+                                            />
+                                        </div>
                                     </td>
-                                    <td className="p-4 text-right">
-                                        <Input
-                                            type="number"
-                                            className="text-right h-8 w-full text-sm bg-white"
-                                            value={item.luxePrice}
-                                            onChange={(e) =>
-                                                updateItem(category.id, item.id, { luxePrice: parseInt(e.target.value) || 0 })
-                                            }
-                                        />
+                                    <td className="py-4 px-4 bg-slate-50/30">
+                                        <div className="relative group/price">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">₹</span>
+                                            <Input
+                                                type="number"
+                                                className="text-right h-10 w-full text-sm font-bold bg-white border-slate-100 rounded-xl pl-7 hover:border-slate-300 focus:border-slate-900 focus:ring-4 focus:ring-slate-100 transition-all tabular-nums"
+                                                value={item.luxePrice}
+                                                onChange={(e) =>
+                                                    updateItem(category.id, item.id, { luxePrice: parseInt(e.target.value) || 0 })
+                                                }
+                                            />
+                                        </div>
                                     </td>
-                                    <td className="p-4 text-center">
+                                    <td className="py-4 px-4 text-center">
                                         <button
                                             onClick={() => toggleItem(category.id, item.id)}
                                             className={cn(
-                                                "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors shadow-inner",
-                                                item.enabled ? "bg-emerald-500" : "bg-slate-200"
+                                                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-4 border-transparent transition-all duration-300 shadow-inner",
+                                                item.enabled ? "bg-emerald-500 shadow-emerald-200/50" : "bg-slate-200"
                                             )}
                                         >
                                             <span className={cn(
-                                                "pointer-events-none block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform",
+                                                "pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-all duration-300",
                                                 item.enabled ? "translate-x-5" : "translate-x-0"
                                             )} />
                                         </button>
                                     </td>
-                                    <td className="p-4 text-center">
+                                    <td className="py-4 px-4 text-center">
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => deleteItem(category.id, item.id)}
-                                            className="h-8 w-8 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                            className="h-10 w-10 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                                         >
-                                            <Trash2 className="h-4 w-4" />
+                                            <Trash2 className="h-5 w-5" />
                                         </Button>
                                     </td>
                                 </tr>
@@ -283,7 +298,7 @@ export default function PricingPage() {
     const [newCategoryType, setNewCategoryType] = useState<'residential' | 'commercial'>('residential');
     const [selectedCategoryForItem, setSelectedCategoryForItem] = useState("");
     const [newItemName, setNewItemName] = useState("");
-    const [newItemType, setNewItemType] = useState<'fixed' | 'perUnit' | 'perSqft'>('fixed');
+    const [newItemType, setNewItemType] = useState<'fixed' | 'perSqft'>('fixed');
     const [newItemBasicPrice, setNewItemBasicPrice] = useState("");
     const [newItemStandardPrice, setNewItemStandardPrice] = useState("");
     const [newItemLuxePrice, setNewItemLuxePrice] = useState("");
@@ -753,13 +768,13 @@ export default function PricingPage() {
                             <Plus className="h-4 w-4 mr-1" /> Add
                         </Button>
                     </CardHeader>
-                    <CardContent className="p-6 space-y-3">
+                    <CardContent className="p-6 space-y-2">
                         {localConfig.kitchenLayouts?.map((layout) => (
-                            <div key={layout.id} className="flex items-center justify-between p-3 border rounded-lg hover:border-[#0F172A] transition-all group">
+                            <div key={layout.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-slate-900/10 hover:bg-slate-50/50 transition-all group">
                                 {editingLayoutId === layout.id ? (
                                     <Input
                                         autoFocus
-                                        className="text-sm font-medium"
+                                        className="h-10 text-sm font-bold border-slate-200 focus:ring-4 focus:ring-slate-100"
                                         defaultValue={layout.name}
                                         onBlur={(e) => updateKitchenLayout(layout.id, e.target.value)}
                                         onKeyDown={(e) => {
@@ -768,28 +783,29 @@ export default function PricingPage() {
                                         }}
                                     />
                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium">{layout.name}</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-2 w-2 rounded-full bg-slate-200 group-hover:bg-slate-900 transition-colors"></div>
+                                        <span className="text-sm font-bold text-slate-700">{layout.name}</span>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600"
+                                            className="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-slate-900 transition-all"
                                             onClick={() => setEditingLayoutId(layout.id)}
                                         >
                                             <Pencil className="h-3 w-3" />
                                         </Button>
                                     </div>
                                 )}
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-4">
                                     <button
                                         onClick={() => toggleKitchenLayout(layout.id)}
                                         className={cn(
-                                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                                            layout.enabled ? "bg-[#0F172A]" : "bg-gray-200"
+                                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-4 border-transparent transition-all",
+                                            layout.enabled ? "bg-slate-900 shadow-lg shadow-slate-200" : "bg-slate-200"
                                         )}
                                     >
                                         <span className={cn(
-                                            "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
+                                            "pointer-events-none block h-4 w-4 rounded-full bg-white shadow ring-0 transition-all",
                                             layout.enabled ? "translate-x-5" : "translate-x-0"
                                         )} />
                                     </button>
@@ -797,7 +813,7 @@ export default function PricingPage() {
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => deleteKitchenLayout(layout.id)}
-                                        className="h-8 w-8 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600"
+                                        className="h-9 w-9 opacity-0 group-hover:opacity-100 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -820,13 +836,13 @@ export default function PricingPage() {
                             <Plus className="h-4 w-4 mr-1" /> Add
                         </Button>
                     </CardHeader>
-                    <CardContent className="p-6 space-y-3">
+                    <CardContent className="p-6 space-y-2">
                         {localConfig.kitchenMaterials?.map((material) => (
-                            <div key={material.id} className="flex items-center justify-between p-3 border rounded-lg hover:border-[#0F172A] transition-all group">
+                            <div key={material.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-slate-900/10 hover:bg-slate-50/50 transition-all group">
                                 {editingMaterialId === material.id ? (
                                     <Input
                                         autoFocus
-                                        className="text-sm font-medium"
+                                        className="h-10 text-sm font-bold border-slate-200 focus:ring-4 focus:ring-slate-100"
                                         defaultValue={material.name}
                                         onBlur={(e) => updateKitchenMaterial(material.id, e.target.value)}
                                         onKeyDown={(e) => {
@@ -835,28 +851,29 @@ export default function PricingPage() {
                                         }}
                                     />
                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium">{material.name}</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-2 w-2 rounded-full bg-slate-200 group-hover:bg-slate-900 transition-colors"></div>
+                                        <span className="text-sm font-bold text-slate-700">{material.name}</span>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600"
+                                            className="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-slate-900 transition-all"
                                             onClick={() => setEditingMaterialId(material.id)}
                                         >
                                             <Pencil className="h-3 w-3" />
                                         </Button>
                                     </div>
                                 )}
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-4">
                                     <button
                                         onClick={() => toggleKitchenMaterial(material.id)}
                                         className={cn(
-                                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                                            material.enabled ? "bg-[#0F172A]" : "bg-gray-200"
+                                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-4 border-transparent transition-all",
+                                            material.enabled ? "bg-slate-900 shadow-lg shadow-slate-200" : "bg-slate-200"
                                         )}
                                     >
                                         <span className={cn(
-                                            "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
+                                            "pointer-events-none block h-4 w-4 rounded-full bg-white shadow ring-0 transition-all",
                                             material.enabled ? "translate-x-5" : "translate-x-0"
                                         )} />
                                     </button>
@@ -864,7 +881,7 @@ export default function PricingPage() {
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => deleteKitchenMaterial(material.id)}
-                                        className="h-8 w-8 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600"
+                                        className="h-9 w-9 opacity-0 group-hover:opacity-100 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -918,61 +935,73 @@ export default function PricingPage() {
                         <DialogTitle>Add New Item</DialogTitle>
                         <DialogDescription>Add a new pricing item to the selected category.</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <Label>Item Name</Label>
+                    <div className="space-y-8 py-4">
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Item Details</Label>
                             <Input
-                                placeholder="e.g., TV Unit, Wardrobe, Vanity"
+                                placeholder="e.g., TV Unit, Premium Wardrobe"
+                                className="h-14 text-lg font-bold rounded-2xl border-slate-100 focus:ring-[12px] focus:ring-slate-900/5 transition-all pl-6"
                                 value={newItemName}
                                 onChange={(e) => setNewItemName(e.target.value)}
                             />
                         </div>
-                        <div>
-                            <Label>Pricing Type</Label>
-                            <Select value={newItemType} onValueChange={(value: 'fixed' | 'perUnit' | 'perSqft') => setNewItemType(value)}>
-                                <SelectTrigger>
-                                    <SelectValue />
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Calculation Method</Label>
+                            <Select value={newItemType} onValueChange={(value: 'fixed' | 'perSqft') => setNewItemType(value)}>
+                                <SelectTrigger className="h-14 rounded-2xl border-slate-100 hover:bg-slate-50 transition-all px-6">
+                                    <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="fixed">Fixed Price (one-time)</SelectItem>
-                                    <SelectItem value="perUnit">Per Unit (quantity-based)</SelectItem>
-                                    <SelectItem value="perSqft">Per Sqft (area-based)</SelectItem>
+                                <SelectContent className="rounded-2xl border-slate-100 shadow-2xl p-2">
+                                    <SelectItem value="fixed" className="rounded-xl py-3 font-bold">Fixed (Quantity Based)</SelectItem>
+                                    <SelectItem value="perSqft" className="rounded-xl py-3 font-bold">Per Sqft (Area Based)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <Label>Basic Price (₹)</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="28000"
-                                    value={newItemBasicPrice}
-                                    onChange={(e) => setNewItemBasicPrice(e.target.value)}
-                                />
+                        <div className="grid grid-cols-3 gap-6">
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Basic Tier</Label>
+                                <div className="relative group/price">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-300">₹</span>
+                                    <Input
+                                        type="number"
+                                        placeholder="0"
+                                        className="h-14 pl-8 font-black text-lg rounded-2xl border-slate-100 hover:border-slate-300 transition-all tabular-nums"
+                                        value={newItemBasicPrice}
+                                        onChange={(e) => setNewItemBasicPrice(e.target.value)}
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <Label>Standard Price (₹)</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="35000"
-                                    value={newItemStandardPrice}
-                                    onChange={(e) => setNewItemStandardPrice(e.target.value)}
-                                />
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Standard Tier</Label>
+                                <div className="relative group/price">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-900/30">₹</span>
+                                    <Input
+                                        type="number"
+                                        placeholder="0"
+                                        className="h-14 pl-8 font-black text-lg rounded-2xl border-2 border-slate-900/10 focus:border-slate-900 focus:ring-8 focus:ring-slate-900/5 transition-all tabular-nums"
+                                        value={newItemStandardPrice}
+                                        onChange={(e) => setNewItemStandardPrice(e.target.value)}
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <Label>Luxe Price (₹)</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="42000"
-                                    value={newItemLuxePrice}
-                                    onChange={(e) => setNewItemLuxePrice(e.target.value)}
-                                />
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Luxe Tier</Label>
+                                <div className="relative group/price">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-300">₹</span>
+                                    <Input
+                                        type="number"
+                                        placeholder="0"
+                                        className="h-14 pl-8 font-black text-lg rounded-2xl border-slate-100 hover:border-slate-300 transition-all tabular-nums"
+                                        value={newItemLuxePrice}
+                                        onChange={(e) => setNewItemLuxePrice(e.target.value)}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setShowAddItem(false)}>Cancel</Button>
-                        <Button onClick={addItem}>Add Item</Button>
+                    <DialogFooter className="pt-6">
+                        <Button variant="ghost" className="rounded-xl h-12 font-bold px-8" onClick={() => setShowAddItem(false)}>Cancel</Button>
+                        <Button className="rounded-xl h-12 font-black px-10 bg-slate-900 hover:bg-black transition-all" onClick={addItem}>Create Pricing Item</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

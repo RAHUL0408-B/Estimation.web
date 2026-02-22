@@ -22,7 +22,8 @@ import {
     IndianRupee,
     CheckCircle,
     XCircle,
-    Hammer
+    Hammer,
+    TrendingUp
 } from "lucide-react";
 import { useTenantAuth } from "@/hooks/useTenantAuth";
 import { useTenantDashboard, RecentOrder } from "@/hooks/useTenantDashboard";
@@ -45,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { motion } from "framer-motion";
 
 import { generateSampleData } from "@/lib/sampleData";
 
@@ -140,383 +142,452 @@ export default function TenantDashboardPage() {
     };
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-gray-500">Welcome back, {tenant.name.split(' ')[0]}. Here's what's happening today.</p>
-            </div>
+        <>
+            <div className="space-y-12 pb-20">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                    <div className="space-y-1">
+                        <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 uppercase tracking-[0.05em]">Analytics Overview</h1>
+                        <p className="text-lg text-slate-500 font-medium">Welcome back, {tenant.name.split(' ')[0]}. Here's your business performance today.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live System Status</span>
+                    </div>
+                </div>
 
-            {/* Summary Cards */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <Link href="/dashboard/projects" className="block">
-                    <Card className="border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-emerald-50/50">
+                {/* Summary Cards */}
+                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+                    {/* Monthly Revenue */}
+                    <Card className="group relative overflow-hidden border-none shadow-enterprise hover:scale-[1.02] transition-all duration-300">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors"></div>
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
-                                Active Projects
+                            <CardTitle className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                Monthly Revenue
                             </CardTitle>
-                            <Hammer className="h-5 w-5 text-emerald-400" />
+                            <div className="p-2.5 bg-blue-50 rounded-xl group-hover:rotate-6 transition-transform">
+                                <IndianRupee className="h-4 w-4 text-blue-600" />
+                            </div>
                         </CardHeader>
-                        <CardContent>
-                            <div className="text-4xl font-bold text-emerald-900">{stats.activeProjectsCount}</div>
+                        <CardContent className="pt-4">
+                            <div className="text-4xl font-black text-slate-900 tracking-tight">{formatAmount(stats.revenue.thisMonth)}</div>
+                            <div className="mt-4 flex items-center gap-2">
+                                <div className={cn(
+                                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                                    stats.revenue.growth > 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+                                )}>
+                                    <TrendingUp className={cn("h-3 w-3", stats.revenue.growth < 0 && "rotate-180")} />
+                                    {stats.revenue.growth > 0 ? `+${stats.revenue.growth.toFixed(1)}%` : `${stats.revenue.growth.toFixed(1)}%`}
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vs Last Month</span>
+                            </div>
                         </CardContent>
                     </Card>
-                </Link>
 
-                <Card className="border-none shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            Total Client Orders
-                        </CardTitle>
-                        <Users className="h-5 w-5 text-gray-300" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-[#0F172A]">{stats.ordersCount}</div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            Pending Approvals
-                        </CardTitle>
-                        <Clock className="h-5 w-5 text-gray-300" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-[#0F172A]">{stats.pendingApprovalsCount}</div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            Today's Estimates
-                        </CardTitle>
-                        <CalendarDays className="h-5 w-5 text-gray-300" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-[#0F172A]">{stats.todayEstimatesCount}</div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Needs Your Attention */}
-            {(stats.pendingApprovalsCount > 0 || stats.rejectedThisWeekCount > 0) && (
-                <Card className="border-none shadow-sm bg-amber-50">
-                    <CardContent className="py-4">
-                        <div className="flex items-center gap-3">
-                            <AlertCircle className="h-5 w-5 text-amber-600" />
-                            <div className="flex-1">
-                                <p className="text-sm font-medium text-amber-900">Needs Your Attention</p>
-                                <p className="text-sm text-amber-700">
-                                    {stats.pendingApprovalsCount > 0 && (
-                                        <span>You have <strong>{stats.pendingApprovalsCount}</strong> pending approval{stats.pendingApprovalsCount !== 1 ? 's' : ''}</span>
-                                    )}
-                                    {stats.pendingApprovalsCount > 0 && stats.rejectedThisWeekCount > 0 && ' · '}
-                                    {stats.rejectedThisWeekCount > 0 && (
-                                        <span><strong>{stats.rejectedThisWeekCount}</strong> rejected estimate{stats.rejectedThisWeekCount !== 1 ? 's' : ''} this week</span>
-                                    )}
-                                </p>
+                    {/* Estimates This Month */}
+                    <Card className="group relative overflow-hidden border-none shadow-enterprise hover:scale-[1.02] transition-all duration-300">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors"></div>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                New Leads
+                            </CardTitle>
+                            <div className="p-2.5 bg-purple-50 rounded-xl group-hover:rotate-6 transition-transform">
+                                <FileText className="h-4 w-4 text-purple-600" />
                             </div>
-                            <Link href="/dashboard/orders">
-                                <Button variant="outline" size="sm" className="bg-white border-amber-200 text-amber-700 hover:bg-amber-100">
-                                    View Orders
-                                </Button>
-                            </Link>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            <div className="text-4xl font-black text-slate-900 tracking-tight">{stats.estimatesThisMonthCount}</div>
+                            <p className="text-[10px] font-bold text-slate-400 mt-4 uppercase tracking-[0.1em]">Estimates Generated</p>
+                        </CardContent>
+                    </Card>
 
-            {/* Quick Actions */}
-            <div className="flex flex-wrap gap-3">
-                <Link href={`/${tenant.storeId}/estimate`}>
-                    <Button variant="outline" size="sm" className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add New Estimate
-                    </Button>
-                </Link>
-                <Link href="/dashboard/orders">
-                    <Button variant="outline" size="sm" className="gap-2">
-                        <List className="h-4 w-4" />
-                        View All Orders
-                    </Button>
-                </Link>
-                <Link href="/dashboard/projects">
-                    <Button variant="outline" size="sm" className="gap-2 bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100">
-                        <Hammer className="h-4 w-4" />
-                        Active Projects
-                    </Button>
-                </Link>
-                <Link href="/dashboard/pricing">
-                    <Button variant="outline" size="sm" className="gap-2">
-                        <Settings className="h-4 w-4" />
-                        Pricing & Config
-                    </Button>
-                </Link>
-                <Link href="/dashboard/website-setup">
-                    <Button variant="outline" size="sm" className="gap-2">
-                        <Globe className="h-4 w-4" />
-                        Website Setup
-                    </Button>
-                </Link>
-            </div>
+                    {/* Conversion Rate */}
+                    <Card className="group relative overflow-hidden border-none shadow-enterprise hover:scale-[1.02] transition-all duration-300">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-orange-500/10 transition-colors"></div>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                Conversion
+                            </CardTitle>
+                            <div className="p-2.5 bg-orange-50 rounded-xl group-hover:rotate-6 transition-transform">
+                                <CheckCircle className="h-4 w-4 text-orange-600" />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            <div className="text-4xl font-black text-slate-900 tracking-tight">{stats.conversionRate.toFixed(1)}%</div>
+                            <div className="mt-4 flex items-center gap-4">
+                                <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${stats.conversionRate}%` }}
+                                        transition={{ duration: 1, ease: "easeOut" }}
+                                        className="h-full bg-orange-500 rounded-full"
+                                    />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-            {/* Recent Client Estimates Table */}
-            <Card className="border-none shadow-sm overflow-hidden bg-white">
-                <CardHeader className="border-b bg-gray-50/30 py-4 px-6 flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm font-bold text-gray-700">Recent Client Estimates</CardTitle>
-                    <Link href="/dashboard/orders">
-                        <Button variant="ghost" size="sm" className="text-xs text-gray-500 hover:text-gray-700">
-                            View All
-                        </Button>
+                    {/* Active Projects */}
+                    <Link href="/dashboard/projects" className="block">
+                        <Card className="group relative overflow-hidden border-none shadow-enterprise hover:scale-[1.02] transition-all duration-300 bg-slate-950 text-white">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-white/10 transition-colors"></div>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                                <CardTitle className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                    Operations
+                                </CardTitle>
+                                <div className="p-2.5 bg-white/10 rounded-xl group-hover:rotate-6 transition-transform">
+                                    <Hammer className="h-4 w-4 text-slate-300" />
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-4">
+                                <div className="text-4xl font-black text-white tracking-tight">{stats.activeProjectsCount}</div>
+                                <p className="text-[10px] font-bold text-slate-400 mt-4 uppercase tracking-[0.1em]">Active Projects</p>
+                            </CardContent>
+                        </Card>
                     </Link>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="hover:bg-transparent bg-gray-50/20">
-                                <TableHead className="text-[10px] font-bold text-gray-400 uppercase pl-6">Client</TableHead>
-                                <TableHead className="text-[10px] font-bold text-gray-400 uppercase">Phone</TableHead>
-                                <TableHead className="text-[10px] font-bold text-gray-400 uppercase">Amount</TableHead>
-                                <TableHead className="text-[10px] font-bold text-gray-400 uppercase">Status</TableHead>
-                                <TableHead className="text-[10px] font-bold text-gray-400 uppercase">Date</TableHead>
-                                <TableHead className="text-[10px] font-bold text-gray-400 uppercase text-right pr-6">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {stats.recentOrders.length === 0 ? (
+                </div>
+
+                {/* Needs Your Attention */}
+                {(stats.pendingApprovalsCount > 0 || stats.rejectedThisWeekCount > 0) && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                    >
+                        <Card className="border border-amber-200 shadow-enterprise bg-amber-50/30 rounded-2xl">
+                            <CardContent className="py-6">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                                    <div className="p-4 bg-white rounded-2xl shadow-sm text-amber-600 border border-amber-100/50">
+                                        <AlertCircle className="h-6 w-6" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-black text-amber-900 uppercase tracking-[0.2em] mb-1">Operational Alert</p>
+                                        <p className="text-base text-amber-700 font-medium leading-relaxed">
+                                            {stats.pendingApprovalsCount > 0 && (
+                                                <span>You have <strong>{stats.pendingApprovalsCount}</strong> pending approval{stats.pendingApprovalsCount !== 1 ? 's' : ''} awaiting review.</span>
+                                            )}
+                                            {stats.pendingApprovalsCount > 0 && stats.rejectedThisWeekCount > 0 && ' '}
+                                            {stats.rejectedThisWeekCount > 0 && (
+                                                <span>System flagged <strong>{stats.rejectedThisWeekCount}</strong> rejected estimate{stats.rejectedThisWeekCount !== 1 ? 's' : ''} this week.</span>
+                                            )}
+                                        </p>
+                                    </div>
+                                    <Link href="/dashboard/orders" className="shrink-0">
+                                        <Button variant="outline" className="bg-white border-amber-200 text-amber-900 hover:bg-amber-100 font-black uppercase tracking-widest text-[10px] px-6 h-12 shadow-sm">
+                                            Review Orders
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
+
+                {/* Quick Actions */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="h-px flex-1 bg-slate-100"></div>
+                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                            <Settings className="h-3 w-3" />
+                            Quick Core Operations
+                        </div>
+                        <div className="h-px flex-1 bg-slate-100"></div>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-4">
+                        <Link href="/dashboard/orders">
+                            <Button variant="outline" className="min-w-[160px] gap-3 rounded-xl border-slate-200 h-14 px-6 font-bold text-slate-600 hover:bg-white hover:border-primary hover:text-primary shadow-sm">
+                                <List className="h-5 w-5" />
+                                All Orders
+                            </Button>
+                        </Link>
+                        <Link href="/dashboard/projects">
+                            <Button variant="outline" className="min-w-[160px] gap-3 rounded-xl bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200 h-14 px-6 font-bold shadow-sm">
+                                <Hammer className="h-5 w-5" />
+                                Active Projects
+                            </Button>
+                        </Link>
+                        <Link href="/dashboard/pricing">
+                            <Button variant="outline" className="min-w-[160px] gap-3 rounded-xl border-slate-200 h-14 px-6 font-bold text-slate-600 hover:bg-white hover:border-primary hover:text-primary shadow-sm">
+                                <Settings className="h-5 w-5" />
+                                Pricing Config
+                            </Button>
+                        </Link>
+                        <Link href="/dashboard/website-setup">
+                            <Button variant="outline" className="min-w-[160px] gap-3 rounded-xl border-slate-200 h-14 px-6 font-bold text-slate-600 hover:bg-white hover:border-primary hover:text-primary shadow-sm">
+                                <Globe className="h-5 w-5" />
+                                Site Settings
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Recent Client Estimates Table */}
+                <Card className="border-none shadow-enterprise rounded-2xl overflow-hidden bg-white mt-8">
+                    <CardHeader className="bg-slate-50/40 py-8 px-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div className="space-y-1">
+                            <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Recent Estimates</CardTitle>
+                            <p className="text-sm text-slate-500 font-medium">Monitoring latest client interactions from the storefront portal.</p>
+                        </div>
+                        <Link href="/dashboard/orders">
+                            <Button variant="ghost" className="text-[10px] font-black text-slate-400 hover:text-primary uppercase tracking-[0.2em]">
+                                View Comprehensive Logs
+                            </Button>
+                        </Link>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-12 text-gray-400 text-sm">
-                                        No recent estimates yet
-                                    </TableCell>
+                                    <TableHead className="pl-10">Client Identity</TableHead>
+                                    <TableHead>Contact Node</TableHead>
+                                    <TableHead>Project Value</TableHead>
+                                    <TableHead>Lifecycle Status</TableHead>
+                                    <TableHead>Timestamp</TableHead>
+                                    <TableHead className="text-right pr-10">Operations</TableHead>
                                 </TableRow>
-                            ) : (
-                                stats.recentOrders.map((order) => (
-                                    <TableRow key={order.id} className="hover:bg-gray-50/50 transition-colors">
-                                        <TableCell className="pl-6">
-                                            <div className="font-semibold text-gray-900">{order.clientName || "-"}</div>
-                                        </TableCell>
-                                        <TableCell className="text-gray-500 text-sm">
-                                            {order.clientPhone || "-"}
-                                        </TableCell>
-                                        <TableCell className="font-bold text-gray-900">
-                                            {formatAmount(order.estimatedAmount)}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge className={cn("capitalize px-3 py-1 border-none text-[10px] font-bold uppercase", getStatusColor(order.status))}>
-                                                {order.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-gray-500 text-sm">
-                                            {formatDate(order.createdAt)}
-                                        </TableCell>
-                                        <TableCell className="text-right pr-6">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => openDetails(order)}
-                                                    className="h-8 px-3 text-xs"
-                                                >
-                                                    <Eye className="h-3.5 w-3.5 mr-1" />
-                                                    View
-                                                </Button>
-                                                {order.pdfUrl && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => window.open(order.pdfUrl, '_blank')}
-                                                        className="h-8 px-3 text-xs"
-                                                    >
-                                                        <Download className="h-3.5 w-3.5 mr-1" />
-                                                        PDF
-                                                    </Button>
-                                                )}
-                                            </div>
+                            </TableHeader>
+                            <TableBody>
+                                {stats.recentOrders.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-20 text-slate-400 font-medium italic">
+                                            System initialized. Awaiting first client estimate.
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
-            {/* Order Details Modal */}
-            <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-                <DialogContent className="max-w-2xl p-0 gap-0 bg-white border-none shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
-                    {/* Sticky Header */}
-                    <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b bg-white">
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-900">Order Details</h2>
-                            <p className="text-sm text-gray-500">Estimate #{selectedOrder?.estimateId?.slice(-8) || selectedOrder?.id?.slice(-8)}</p>
-                        </div>
-                        <DialogClose asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </DialogClose>
-                    </div>
-
-                    {/* Scrollable Content */}
-                    <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6 space-y-6">
-                        {selectedOrder && (
-                            <>
-                                {/* Client Information */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
-                                        <User className="h-4 w-4" />
-                                        Client Information
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
-                                        <div>
-                                            <p className="text-xs text-gray-400 uppercase">Full Name</p>
-                                            <p className="font-semibold text-gray-900">{selectedOrder.clientName || "-"}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-400 uppercase">Email</p>
-                                            <p className="font-semibold text-gray-900">{selectedOrder.clientEmail || "-"}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-400 uppercase">Phone</p>
-                                            <p className="font-semibold text-gray-900">{selectedOrder.clientPhone || "-"}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-400 uppercase">Estimate ID</p>
-                                            <p className="font-mono text-sm text-gray-900">{selectedOrder.estimateId || selectedOrder.id}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Project Details */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
-                                        <Home className="h-4 w-4" />
-                                        Project Details
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
-                                        {selectedOrder.carpetArea && (
-                                            <div>
-                                                <p className="text-xs text-gray-400 uppercase">Carpet Area</p>
-                                                <p className="font-semibold text-gray-900">{selectedOrder.carpetArea} sqft</p>
-                                            </div>
-                                        )}
-                                        {selectedOrder.numberOfRooms && (
-                                            <div>
-                                                <p className="text-xs text-gray-400 uppercase">Number of Rooms</p>
-                                                <p className="font-semibold text-gray-900">{selectedOrder.numberOfRooms}</p>
-                                            </div>
-                                        )}
-                                        {(selectedOrder.rooms || selectedOrder.selectedRooms) && (selectedOrder.rooms || selectedOrder.selectedRooms)!.length > 0 && (
-                                            <div className="col-span-2">
-                                                <p className="text-xs text-gray-400 uppercase mb-2">Selected Rooms / Items</p>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {(selectedOrder.rooms || selectedOrder.selectedRooms)!.map((room, idx) => (
-                                                        <Badge key={idx} variant="outline" className="bg-white text-gray-700">
-                                                            {room}
-                                                        </Badge>
-                                                    ))}
+                                ) : (
+                                    stats.recentOrders.map((order) => (
+                                        <TableRow key={order.id}>
+                                            <TableCell className="pl-10">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-xs">
+                                                        {(order.clientName || "U").charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="font-bold text-slate-900">{order.clientName || "Unknown Client"}</div>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-slate-500 font-medium">
+                                                {order.clientPhone || "N/A"}
+                                            </TableCell>
+                                            <TableCell className="font-black text-slate-900">
+                                                {formatAmount(order.estimatedAmount)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={
+                                                    order.status === "approved" ? "success" :
+                                                        order.status === "pending" ? "warning" :
+                                                            order.status === "rejected" ? "destructive" : "secondary"
+                                                }>
+                                                    {order.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-slate-400 text-xs font-bold">
+                                                {formatDate(order.createdAt)}
+                                            </TableCell>
+                                            <TableCell className="text-right pr-10">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="icon"
+                                                        onClick={() => openDetails(order)}
+                                                        className="h-10 w-10 hover:bg-slate-200 transition-colors"
+                                                        title="View Detailed Order"
+                                                    >
+                                                        <Eye className="h-4 w-4 text-slate-600" />
+                                                    </Button>
+                                                    {order.pdfUrl && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => window.open(order.pdfUrl, '_blank')}
+                                                            className="h-10 w-10 hover:border-primary hover:text-primary transition-colors"
+                                                            title="Download Estimate (PDF)"
+                                                        >
+                                                            <Download className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
 
-                                {/* Specifications */}
-                                {(selectedOrder.materialGrade || selectedOrder.finishType) && (
+                {/* Order Details Modal */}
+                <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+                    <DialogContent className="max-w-2xl p-0 gap-0 bg-white border-none shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
+                        {/* Sticky Header */}
+                        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b bg-white">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">Order Details</h2>
+                                <p className="text-sm text-gray-500">Estimate #{selectedOrder?.estimateId?.slice(-8) || selectedOrder?.id?.slice(-8)}</p>
+                            </div>
+                            <DialogClose asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </DialogClose>
+                        </div>
+
+                        {/* Scrollable Content */}
+                        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6 space-y-6">
+                            {selectedOrder && (
+                                <>
+                                    {/* Client Information */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
-                                            <Layers className="h-4 w-4" />
-                                            Specifications
+                                            <User className="h-4 w-4" />
+                                            Client Information
                                         </div>
                                         <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
-                                            {selectedOrder.materialGrade && (
+                                            <div>
+                                                <p className="text-xs text-gray-400 uppercase">Full Name</p>
+                                                <p className="font-semibold text-gray-900">{selectedOrder.clientName || "-"}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-400 uppercase">Email</p>
+                                                <p className="font-semibold text-gray-900">{selectedOrder.clientEmail || "-"}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-400 uppercase">Phone</p>
+                                                <p className="font-semibold text-gray-900">{selectedOrder.clientPhone || "-"}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-400 uppercase">Estimate ID</p>
+                                                <p className="font-mono text-sm text-gray-900">{selectedOrder.estimateId || selectedOrder.id}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Project Details */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
+                                            <Home className="h-4 w-4" />
+                                            Project Details
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
+                                            {selectedOrder.carpetArea && (
                                                 <div>
-                                                    <p className="text-xs text-gray-400 uppercase">Material Grade</p>
-                                                    <p className="font-semibold text-gray-900">{selectedOrder.materialGrade}</p>
+                                                    <p className="text-xs text-gray-400 uppercase">Carpet Area</p>
+                                                    <p className="font-semibold text-gray-900">{selectedOrder.carpetArea} sqft</p>
                                                 </div>
                                             )}
-                                            {selectedOrder.finishType && (
+                                            {selectedOrder.numberOfRooms && (
                                                 <div>
-                                                    <p className="text-xs text-gray-400 uppercase">Finish Type</p>
-                                                    <p className="font-semibold text-gray-900">{selectedOrder.finishType}</p>
+                                                    <p className="text-xs text-gray-400 uppercase">Number of Rooms</p>
+                                                    <p className="font-semibold text-gray-900">{selectedOrder.numberOfRooms}</p>
+                                                </div>
+                                            )}
+                                            {(selectedOrder.rooms || selectedOrder.selectedRooms) && (selectedOrder.rooms || selectedOrder.selectedRooms)!.length > 0 && (
+                                                <div className="col-span-2">
+                                                    <p className="text-xs text-gray-400 uppercase mb-2">Selected Rooms / Items</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {(selectedOrder.rooms || selectedOrder.selectedRooms)!.map((room, idx) => (
+                                                            <Badge key={idx} variant="outline" className="bg-white text-gray-700">
+                                                                {room}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                )}
 
-                                {/* Estimate Summary */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
-                                        <IndianRupee className="h-4 w-4" />
-                                        Summary
-                                    </div>
-                                    <div className="bg-[#0F172A] rounded-lg p-6 text-white">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <span className="text-gray-400">Estimated Amount</span>
-                                            <span className="text-3xl font-bold">{formatAmount(selectedOrder.estimatedAmount)}</span>
+                                    {/* Specifications */}
+                                    {(selectedOrder.materialGrade || selectedOrder.finishType) && (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
+                                                <Layers className="h-4 w-4" />
+                                                Specifications
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
+                                                {selectedOrder.materialGrade && (
+                                                    <div>
+                                                        <p className="text-xs text-gray-400 uppercase">Material Grade</p>
+                                                        <p className="font-semibold text-gray-900">{selectedOrder.materialGrade}</p>
+                                                    </div>
+                                                )}
+                                                {selectedOrder.finishType && (
+                                                    <div>
+                                                        <p className="text-xs text-gray-400 uppercase">Finish Type</p>
+                                                        <p className="font-semibold text-gray-900">{selectedOrder.finishType}</p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="flex items-center justify-between pt-4 border-t border-gray-700">
-                                            <span className="text-gray-400">Status</span>
-                                            <Badge className={cn("capitalize px-3 py-1", getStatusColor(selectedOrder.status))}>
-                                                {selectedOrder.status}
-                                            </Badge>
-                                        </div>
-                                        <div className="flex items-center justify-between pt-4">
-                                            <span className="text-gray-400">Created</span>
-                                            <span className="text-white">{formatDate(selectedOrder.createdAt)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                                    )}
 
-                    {/* Sticky Footer */}
-                    <div className="shrink-0 flex items-center justify-between gap-3 px-6 py-4 border-t bg-gray-50">
-                        <div className="flex gap-2">
-                            {selectedOrder?.pdfUrl && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() => window.open(selectedOrder.pdfUrl, '_blank')}
-                                    className="gap-2"
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Download PDF
-                                </Button>
-                            )}
-                        </div>
-                        <div className="flex gap-2">
-                            {selectedOrder?.status === "pending" && (
-                                <>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => selectedOrder && handleReject(selectedOrder.id)}
-                                        className="gap-2 border-red-200 text-red-600 hover:bg-red-50"
-                                    >
-                                        <XCircle className="h-4 w-4" />
-                                        Reject
-                                    </Button>
-                                    <Button
-                                        onClick={() => selectedOrder && handleApprove(selectedOrder.id)}
-                                        className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-                                    >
-                                        <CheckCircle className="h-4 w-4" />
-                                        Approve
-                                    </Button>
+                                    {/* Estimate Summary */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
+                                            <IndianRupee className="h-4 w-4" />
+                                            Summary
+                                        </div>
+                                        <div className="bg-[#0F172A] rounded-lg p-6 text-white">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <span className="text-gray-400">Estimated Amount</span>
+                                                <span className="text-3xl font-bold">{formatAmount(selectedOrder.estimatedAmount)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between pt-4 border-t border-gray-700">
+                                                <span className="text-gray-400">Status</span>
+                                                <Badge className={cn("capitalize px-3 py-1", getStatusColor(selectedOrder.status))}>
+                                                    {selectedOrder.status}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex items-center justify-between pt-4">
+                                                <span className="text-gray-400">Created</span>
+                                                <span className="text-white">{formatDate(selectedOrder.createdAt)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </>
                             )}
-                            {selectedOrder?.status !== "pending" && (
-                                <DialogClose asChild>
-                                    <Button variant="outline">Close</Button>
-                                </DialogClose>
-                            )}
                         </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        </div>
+
+                        {/* Sticky Footer */}
+                        <div className="shrink-0 flex items-center justify-between gap-3 px-6 py-4 border-t bg-gray-50">
+                            <div className="flex gap-2">
+                                {selectedOrder?.pdfUrl && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => window.open(selectedOrder.pdfUrl, '_blank')}
+                                        className="gap-2"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        Download PDF
+                                    </Button>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                {selectedOrder?.status === "pending" && (
+                                    <>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => selectedOrder && handleReject(selectedOrder.id)}
+                                            className="gap-2 border-red-200 text-red-600 hover:bg-red-50"
+                                        >
+                                            <XCircle className="h-4 w-4" />
+                                            Reject
+                                        </Button>
+                                        <Button
+                                            onClick={() => selectedOrder && handleApprove(selectedOrder.id)}
+                                            className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                                        >
+                                            <CheckCircle className="h-4 w-4" />
+                                            Approve
+                                        </Button>
+                                    </>
+                                )}
+                                {selectedOrder?.status !== "pending" && (
+                                    <DialogClose asChild>
+                                        <Button variant="outline">Close</Button>
+                                    </DialogClose>
+                                )}
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </>
     );
 }

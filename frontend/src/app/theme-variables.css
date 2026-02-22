@@ -1,49 +1,91 @@
 /* Global CSS Variables for Theme System */
 :root {
-    /* Default theme colors */
-    --primary: #ea580c;
-    --secondary: #1c1917;
-    --accent: #3b82f6;
+    /* Enterprise Color Palette */
+    --primary: #F97316; /* Deep Orange Brand */
+    --primary-foreground: #ffffff;
+    
+    --secondary: #0F172A; /* Deep Navy/Charcoal */
+    --secondary-foreground: #F8FAFC;
+    
+    --accent: #6366F1;
+    --accent-foreground: #ffffff;
 
-    /* Default button radius */
-    --button-radius: 8px;
+    --background: #F8FAFC; /* Soft Off-White */
+    --foreground: #020617; /* High contrast navy for text */
+    
+    --card: #ffffff;
+    --card-foreground: #020617;
+    
+    --border: #E2E8F0;
+    --input: #F1F5F9;
+    --ring: rgba(249, 115, 22, 0.2);
 
-    /* Default font */
-    --font-family: Inter, system-ui, sans-serif;
+    /* Premium Shadows & Elevation */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+    
+    /* Layered Enterprise Shadow */
+    --shadow-enterprise: 0 0 0 1px rgba(0, 0, 0, 0.03), 
+                          0 2px 4px rgba(0, 0, 0, 0.05), 
+                          0 12px 24px rgba(0, 0, 0, 0.05);
+
+    /* Spacing & Radius */
+    --radius: 12px;
+    --button-radius: 10px;
+    
+    /* Typography */
+    --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    --line-height-relaxed: 1.625;
 }
 
-/* Apply theme font globally */
+/* Base resets & improvements */
 body {
     font-family: var(--font-family);
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    line-height: var(--line-height-relaxed);
 }
 
-/* Button styles using CSS variables */
-.btn-primary {
-    background-color: var(--primary);
-    border-radius: var(--button-radius);
+/* Global utility for enterprise cards */
+.card-enterprise {
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-enterprise);
+    border-radius: var(--radius);
+    padding: 2rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.btn-primary:hover {
-    background-color: var(--primary);
-    opacity: 0.9;
+.card-enterprise:hover {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 
+                0 4px 8px rgba(0, 0, 0, 0.05), 
+                0 20px 40px rgba(0, 0, 0, 0.08);
 }
 
-.text-primary {
-    color: var(--primary);
-}
-
-.bg-primary {
-    background-color: var(--primary);
-}
-
-.border-primary {
-    border-color: var(--primary);
-}
-
-.text-secondary {
+/* Metric optimization */
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     color: var(--secondary);
 }
 
-.bg-secondary {
-    background-color: var(--secondary);
+.metric-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748B;
+}
+
+/* Button helpers */
+.btn-premium {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-premium:hover {
+    transform: translateY(-1px) scale(1.02);
 }
