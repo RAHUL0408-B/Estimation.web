@@ -93,6 +93,25 @@ function getTableConfig(path: string) {
     return { table: 'firestore_documents', isGeneric: true };
 }
 
+function prepareRelationalData(table: string, payload: any) {
+    const result: any = { data: {} };
+    const schemaCols = {
+        users: ['uid', 'email', 'role', 'tenantId', 'lastLogin', 'createdAt'],
+        customers: ['uid', 'email', 'displayName', 'phoneNumber', 'city', 'photoURL', 'lastLogin', 'createdAt'],
+        tenants: ['ownerUid', 'name', 'status', 'plan', 'createdAt']
+    };
+    const validCols = schemaCols[table as keyof typeof schemaCols] || [];
+
+    for (const [key, value] of Object.entries(payload)) {
+        if (validCols.includes(key)) {
+            result[key] = value;
+        } else if (key !== 'id') {
+            result.data[key] = value;
+        }
+    }
+    return result;
+}
+
 export const getDocs = async (queryObj: any) => {
     const { table, isGeneric } = getTableConfig(queryObj.path);
     let builder: any = supabase.from(table).select('*');
@@ -150,9 +169,12 @@ export const addDoc = async (collectionRef: any, data: any) => {
     const { table, isGeneric } = getTableConfig(collectionRef.path);
     const id = Date.now().toString(36) + Math.random().toString(36).substring(2);
     if (isGeneric) {
-        await supabase.from(table).insert({ collection_path: collectionRef.path, doc_id: id, data: data });
+        const { error } = await supabase.from(table).insert({ collection_path: collectionRef.path, doc_id: id, data: data });
+        if (error) console.error("addDoc generic err:", error);
     } else {
-        await supabase.from(table).insert({ id, ...data });
+        const payload = prepareRelationalData(table, data);
+        const { error } = await supabase.from(table).insert({ id, ...payload });
+        if (error) console.error("addDoc relational err:", error);
     }
     return { id };
 };
@@ -162,9 +184,18 @@ export const setDoc = async (docRef: any, data: any, options?: { merge: boolean 
     if (isGeneric) {
         const existing = await supabase.from(table).select('data').eq('collection_path', docRef.path).eq('doc_id', docRef.id).single();
         const newData = options?.merge && existing.data ? { ...existing.data.data, ...data } : data;
-        await supabase.from(table).upsert({ collection_path: docRef.path, doc_id: docRef.id, data: newData }, { onConflict: 'collection_path,doc_id' });
+        const { error } = await supabase.from(table).upsert({ collection_path: docRef.path, doc_id: docRef.id, data: newData }, { onConflict: 'collection_path,doc_id' });
+        if (error) console.error("setDoc generic err:", error);
     } else {
-        await supabase.from(table).upsert({ id: docRef.id, ...data });
+        let payload = prepareRelationalData(table, data);
+        if (options?.merge) {
+            const existing = await supabase.from(table).select('data').eq('id', docRef.id).single();
+            if (existing.data?.data) {
+                payload.data = { ...existing.data.data, ...payload.data };
+            }
+        }
+        const { error } = await supabase.from(table).upsert({ id: docRef.id, ...payload });
+        if (error) console.error("setDoc relational err:", error);
     }
 };
 
@@ -174,10 +205,17 @@ export const updateDoc = async (docRef: any, data: any) => {
         const existing = await supabase.from(table).select('data').eq('collection_path', docRef.path).eq('doc_id', docRef.id).single();
         if (existing.data) {
             const newData = { ...existing.data.data, ...data };
-            await supabase.from(table).update({ data: newData }).eq('collection_path', docRef.path).eq('doc_id', docRef.id);
+            const { error } = await supabase.from(table).update({ data: newData }).eq('collection_path', docRef.path).eq('doc_id', docRef.id);
+            if (error) console.error("updateDoc generic err:", error);
         }
     } else {
-        await supabase.from(table).update(data).eq('id', docRef.id);
+        const existing = await supabase.from(table).select('data').eq('id', docRef.id).single();
+        const payload = prepareRelationalData(table, data);
+        if (existing.data?.data) {
+            payload.data = { ...existing.data.data, ...payload.data };
+        }
+        const { error } = await supabase.from(table).update(payload).eq('id', docRef.id);
+        if (error) console.error("updateDoc relational err:", error);
     }
 };
 
@@ -210,12 +248,15 @@ export const onSnapshot = (queryObj: any, callbackOrObj: any, errorCallback?: an
 };
 
 function mapToSupabaseData(obj: any): any {
-    const result = { ...obj };
-    return result;
+    if (!obj) return null;
+    if (obj.data && typeof obj.data === 'object' && !Array.isArray(obj.data)) {
+        const { data, ...rest } = obj;
+        return { ...rest, ...data };
+    }
+    return { ...obj };
 }
 function mapFromSupabaseData(obj: any): any {
-    const result = { ...obj };
-    return result;
+    return { ...obj };
 }
 
 // --- SHIM FOR FIREBASE AUTH --- //
