@@ -146,11 +146,11 @@ export default function EmployeesPage() {
                 toast({ title: "Success", description: "Employee added successfully." });
             }
             setIsDialogOpen(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving employee:", error);
             toast({
                 title: "Error",
-                description: "Failed to save employee.",
+                description: error.message || "Failed to save employee.",
                 variant: "destructive"
             });
         }
@@ -261,6 +261,9 @@ export default function EmployeesPage() {
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>{editingEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
+                        <div className="sr-only">
+                            Fill in the details below to {editingEmployee ? "update" : "create"} an employee profile.
+                        </div>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                         <div className="grid grid-cols-2 gap-4">

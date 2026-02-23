@@ -27,14 +27,10 @@ service cloud.firestore {
         get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid == request.auth.uid;
     }
 
-    // ========================================
-    // Users Collection
-    // ========================================
-    match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow read: if isAdmin();
+    function isTenantAdmin(tenantId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // ========================================
@@ -42,6 +38,14 @@ service cloud.firestore {
     // ========================================
     match /{path=**}/employees/{employeeId} {
       allow read: if true;
+    }
+
+    // ========================================
+    // Users Collection
+    // ========================================
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated();
     }
 
     // ========================================
@@ -56,8 +60,7 @@ service cloud.firestore {
     // ========================================
     match /tenants/{tenantId} {
       allow read: if true;
-      allow update: if isAuthenticated() &&
-        resource.data.ownerUid == request.auth.uid;
+      allow update: if isTenantOwner(tenantId) || isTenantAdmin(tenantId);
       allow create: if isAuthenticated();
       
       // ========================================
@@ -66,44 +69,35 @@ service cloud.firestore {
       
       match /brand/config {
         allow read: if true;
-        allow write: if isTenantOwner(tenantId);
+        allow write: if isTenantOwner(tenantId) || isTenantAdmin(tenantId);
       }
       match /theme/config {
         allow read: if true;
-        allow write: if isTenantOwner(tenantId);
+        allow write: if isTenantOwner(tenantId) || isTenantAdmin(tenantId);
       }
 
       match /pages/{pageId} {
         allow read: if true;
-        allow write: if isTenantOwner(tenantId);
-        
-        match /projects/{projectId} {
-             allow read: if true;
-             allow write: if isTenantOwner(tenantId);
-        }
-        match /items/{itemId} {
-             allow read: if true;
-             allow write: if isTenantOwner(tenantId);
-        }
+        allow write: if isTenantOwner(tenantId) || isTenantAdmin(tenantId);
+        match /{allChildren=**} { allow read: if true; allow write: if isTenantOwner(tenantId) || isTenantAdmin(tenantId); }
       }
 
       match /websiteConfig/settings {
         allow read: if true;
-        allow write: if isTenantOwner(tenantId);
+        allow write: if isTenantOwner(tenantId) || isTenantAdmin(tenantId);
       }
 
       // Estimates (Subcollection version)
       match /estimates/{estimateId} {
-        // ALLOW EMPLOYEES (Unauthenticated in Firebase terms) TO VIEW/UPDATE
-        allow read, update: if true;
-        allow create: if isAuthenticated();
+        allow create: if true; 
+        allow read: if true;
+        allow write: if isTenantOwner(tenantId) || isTenantAdmin(tenantId);
       }
 
       // Employees Subcollection
       match /employees/{employeeId} {
-        // Public read/update allowed for employee dashboard
         allow read, update: if true;
-        allow write: if isTenantOwner(tenantId);
+        allow write: if isTenantOwner(tenantId) || isTenantAdmin(tenantId);
       }
     }
 
@@ -113,11 +107,13 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow read: if isAuthenticated() &&
         resource.data.createdByUserId == request.auth.uid;
-      allow read: if isAuthenticated() &&
-        isTenantOwner(resource.data.tenantId);
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() &&
-        isTenantOwner(resource.data.tenantId);
+      allow read: if isAuthenticated() && (
+        isTenantOwner(resource.data.tenantId) || isTenantAdmin(resource.data.tenantId)
+      );
+      allow create: if true;
+      allow update, delete: if isAuthenticated() && (
+        isTenantOwner(resource.data.tenantId) || isTenantAdmin(resource.data.tenantId)
+      );
     }
 
     // ========================================
@@ -127,13 +123,15 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
         resource.data.createdByUserId == request.auth.uid;
       allow read: if isAuthenticated() && (
-        isTenantOwner(resource.data.tenantId) ||
+        isTenantOwner(resource.data.tenantId) || 
+        isTenantAdmin(resource.data.tenantId) ||
         resource.data.companyId == request.auth.uid
       );
-      allow create: if isAuthenticated();
+      allow create: if true;
       allow update: if isAuthenticated() && (
         resource.data.createdByUserId == request.auth.uid ||
-        isTenantOwner(resource.data.tenantId)
+        isTenantOwner(resource.data.tenantId) ||
+        isTenantAdmin(resource.data.tenantId)
       );
     }
 
@@ -142,7 +140,7 @@ service cloud.firestore {
     // ========================================
     match /pricing_configs/{tenantId} {
       allow read: if true;
-      allow write: if isAuthenticated() && isTenantOwner(tenantId);
+      allow write: if isAuthenticated() && (isTenantOwner(tenantId) || isTenantAdmin(tenantId));
     }
 
     // ========================================
@@ -157,8 +155,7 @@ service cloud.firestore {
     // Consultation Requests Collection
     // ========================================
     match /consultation_requests/{requestId} {
-      allow create: if isAuthenticated();
-      // ALLOW EMPLOYEES TO VIEW/UPDATE
+      allow create: if true;
       allow read, update: if true;
     }
 
@@ -167,7 +164,7 @@ service cloud.firestore {
     // ========================================
     match /portfolios/{tenantId} {
       allow read: if true;
-      allow write: if isAuthenticated() && isTenantOwner(tenantId);
+      allow write: if isAuthenticated() && (isTenantOwner(tenantId) || isTenantAdmin(tenantId));
     }
 
     // ========================================

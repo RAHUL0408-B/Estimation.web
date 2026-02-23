@@ -205,29 +205,6 @@ export default function StorefrontLayout({
                         >
                             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                         </Button>
-                        {user ? (
-                            <div className="hidden md:flex items-center gap-2">
-                                <Link href={`/${tenantId}/dashboard`}>
-                                    <Button variant="ghost" className="text-gray-600 hover:text-indigo-600">
-                                        <LayoutDashboard className="h-4 w-4 mr-2" />
-                                        My Dashboard
-                                    </Button>
-                                </Link>
-                                <Button variant="ghost" onClick={handleLogout} className="text-gray-600 hover:text-red-600">
-                                    <LogOut className="h-4 w-4 mr-2" />
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="hidden md:flex items-center gap-2">
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => openAuth("login")}
-                                    className="text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
-                                >
-                                    Login / Sign Up
-                                </Button>
-                            </div>
-                        )}
                         <Link href={`/${tenantId}/book-consultation`}>
                             <Button
                                 className="hidden md:flex text-white rounded-lg px-6 transition-all duration-300 hover:scale-105 hover:shadow-lg"
@@ -264,7 +241,7 @@ export default function StorefrontLayout({
                             </Link>
                         ))}
 
-                        {user ? (
+                        {user && (
                             <div className="flex flex-col gap-3 mt-4 border-t border-gray-100 pt-4">
                                 <div className="text-sm font-medium text-gray-500 px-4 flex items-center gap-2">
                                     <User className="h-4 w-4" />
@@ -283,23 +260,6 @@ export default function StorefrontLayout({
                                 >
                                     <LogOut className="h-5 w-5 mr-3" />
                                     Logout
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col gap-3 mt-4 border-t border-gray-100 pt-4">
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => openAuth("login")}
-                                    className="w-full justify-start text-lg font-medium text-gray-800 hover:text-indigo-600"
-                                >
-                                    Log In
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => openAuth("signup")}
-                                    className="w-full justify-start text-lg font-medium text-gray-800 hover:text-indigo-600"
-                                >
-                                    Sign Up
                                 </Button>
                             </div>
                         )}

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from "@/lib/firebaseWrapper";
 import { getTenantByEmail, Tenant } from "@/lib/firestoreHelpers";
-import { doc, setDoc, serverTimestamp } from "@/lib/firebaseWrapper";
+import { doc, setDoc, serverTimestamp, updateDoc } from "@/lib/firebaseWrapper";
 
 // Cache tenant data to prevent re-fetching on every render
 const tenantCache: { [email: string]: { data: Tenant; timestamp: number } } = {};
@@ -119,22 +119,41 @@ export function useTenantAuth() {
 
             // Sync to 'users' collection (New requirement)
             try {
+                // Ensure the tenant document has the correct ownerUid if missing
+                // This is crucial for Firestore security rules to allow writes to subcollections
+                if (tenantData.id && !tenantData.ownerUid) {
+                    await updateDoc(doc(db, "tenants", tenantData.id), {
+                        ownerUid: userCredential.user.uid
+                    });
+                    tenantData.ownerUid = userCredential.user.uid;
+                }
+
                 await setDoc(doc(db, "users", userCredential.user.uid), {
                     uid: userCredential.user.uid,
                     email: email,
                     role: "admin",
-                    tenantId: userCredential.user.uid, // Admins are their own tenants
+                    tenantId: tenantData.id, // Fixed: use the actual tenant ID, not UID
                     lastLogin: serverTimestamp()
                 }, { merge: true });
             } catch (e) {
-                console.error("Failed to sync admin user:", e);
+                console.error("Failed to sync admin user or update ownerUid:", e);
             }
 
             setLoading(false);
             return true;
         } catch (err: any) {
             console.error("Login error:", err);
-            setError("Invalid email or password");
+            let message = "Invalid email or password";
+            if (err.code === "auth/configuration-not-found") {
+                message = "Firebase Auth not configured correctly.";
+            } else if (err.code === "auth/unauthorized-domain") {
+                message = "This domain is not authorized in Firebase Console.";
+            } else if (err.message && err.message.includes("reading 'app'")) {
+                message = "Firebase initialization failed. Check environment variables.";
+            } else if (err.message) {
+                message = `Error: ${err.message}`;
+            }
+            setError(message);
             setLoading(false);
             return false;
         }

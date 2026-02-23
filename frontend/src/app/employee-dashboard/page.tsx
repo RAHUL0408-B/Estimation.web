@@ -88,6 +88,8 @@ export default function EmployeeDashboard() {
     const [statusNote, setStatusNote] = useState("");
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [crackedRequirements, setCrackedRequirements] = useState("");
+    const [designNotes, setDesignNotes] = useState("");
 
     // Conversion State
 
@@ -229,6 +231,19 @@ export default function EmployeeDashboard() {
 
             await updateDoc(updateRef, updateData);
 
+            // SPECIAL LOGIC: If 'Cracked', mark as an active project for admin
+            if (newStatus === 'cracked') {
+                await updateDoc(updateRef, {
+                    isProject: true,
+                    projectStatus: 'active',
+                    convertedAt: timestamp,
+                    convertedBy: employee.name,
+                    crackedById: employee.id,
+                    projectRequirements: crackedRequirements,
+                    designNotes: designNotes
+                });
+            }
+
             // Also update employee's current work if status is active
             if (newStatus === 'running' || newStatus === 'in_progress' || newStatus === 'contacted') {
                 const employeeRef = doc(db, "tenants", employee.tenantId, "employees", employee.id);
@@ -250,6 +265,8 @@ export default function EmployeeDashboard() {
             setIsDialogOpen(false);
             setNewStatus("");
             setStatusNote("");
+            setCrackedRequirements("");
+            setDesignNotes("");
         } catch (error) {
             console.error("Error updating status:", error);
         } finally {
@@ -570,24 +587,58 @@ export default function EmployeeDashboard() {
                                 <SelectContent>
                                     {updateType === 'order' ? (
                                         <>
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="running">Running / In Progress</SelectItem>
-                                            <SelectItem value="on_hold">On Hold</SelectItem>
-                                            <SelectItem value="successful">Successful / Completed</SelectItem>
+                                            <SelectItem value="pending">Pending Review</SelectItem>
+                                            <SelectItem value="contacted">Contacted</SelectItem>
+                                            <SelectItem value="interested">Interested</SelectItem>
+                                            <SelectItem value="site_visit">Site Visit scheduled</SelectItem>
+                                            <SelectItem value="cracked">Cracked (Won)</SelectItem>
+                                            <SelectItem value="not_interested">Not Interested</SelectItem>
                                             <SelectItem value="cancelled">Cancelled</SelectItem>
                                         </>
                                     ) : (
                                         <>
-                                            <SelectItem value="new">New</SelectItem>
+                                            <SelectItem value="new">New Lead</SelectItem>
                                             <SelectItem value="contacted">Contacted</SelectItem>
-                                            <SelectItem value="follow_up">Follow Up</SelectItem>
-                                            <SelectItem value="converted">Converted</SelectItem>
-                                            <SelectItem value="closed">Closed</SelectItem>
+                                            <SelectItem value="no_answer">Not Answered</SelectItem>
+                                            <SelectItem value="interested">Interested</SelectItem>
+                                            <SelectItem value="site_visit">Site Visit / Meeting</SelectItem>
+                                            <SelectItem value="follow_up">Follow Up Required</SelectItem>
+                                            <SelectItem value="not_interested">Not Interested</SelectItem>
+                                            <SelectItem value="cracked">Cracked (Won Project)</SelectItem>
+                                            <SelectItem value="closed">Closed / Dead Lead</SelectItem>
                                         </>
                                     )}
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {newStatus === 'cracked' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 flex items-center gap-2 mb-2">
+                                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                                    <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Project Handover Details</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Specific Client Requirements</Label>
+                                    <Textarea
+                                        placeholder="What does the client exactly want? (e.g. Italian marble, false ceiling in lobby...)"
+                                        value={crackedRequirements}
+                                        onChange={(e) => setCrackedRequirements(e.target.value)}
+                                        className="border-emerald-200 focus-visible:ring-emerald-500"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Interior Design Notes</Label>
+                                    <Textarea
+                                        placeholder="Any specific design theme, color palette, or designer suggestions..."
+                                        value={designNotes}
+                                        onChange={(e) => setDesignNotes(e.target.value)}
+                                        className="border-emerald-200 focus-visible:ring-emerald-500"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                             <Label>Note / Comment</Label>
                             <Textarea
