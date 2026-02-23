@@ -30,11 +30,8 @@ export async function POST(req: NextRequest) {
         const storagePath = `tenants/${tenantId}/${folder}/${filename}`;
         const storageRef = ref(storage, storagePath);
 
-        // Convert File to ArrayBuffer for Firebase
-        const arrayBuffer = await file.arrayBuffer();
-
-        // Upload to Firebase Storage
-        const snapshot = await uploadBytes(storageRef, arrayBuffer, {
+        // Upload to Firebase/Supabase Storage
+        const snapshot = await uploadBytes(storageRef, file, {
             contentType: file.type,
         });
 
