@@ -272,10 +272,21 @@ export const ref = (storageInstance: any, path: string) => {
     return { type: 'ref', path };
 };
 export const uploadBytes = async (storageRef: any, file: any, metadata?: any) => {
-    // Note: fallback mock storage object due to disabled auto bucket creation
+    const bucketName = 'files';
+    const { data, error } = await supabase.storage.from(bucketName).upload(storageRef.path, file, {
+        upsert: true,
+        contentType: metadata?.contentType
+    });
+
+    if (error) {
+        throw new Error(`Supabase upload error: ${error.message}`);
+    }
+
     return { ref: storageRef };
 };
 export const getDownloadURL = async (storageRef: any) => {
-    return "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=2670&auto=format&fit=crop";
+    const bucketName = 'files';
+    const { data } = supabase.storage.from(bucketName).getPublicUrl(storageRef.path);
+    return data.publicUrl;
 };
 
