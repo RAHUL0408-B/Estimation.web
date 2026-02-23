@@ -103,10 +103,16 @@ function prepareRelationalData(table: string, payload: any) {
     const validCols = schemaCols[table as keyof typeof schemaCols] || [];
 
     for (const [key, value] of Object.entries(payload)) {
+        let val = value;
+        // Fix for Firebase Timestamp objects being injected into Postgres TIMESTAMPTZ columns natively
+        if (val && typeof val === 'object' && val.constructor && val.constructor.name === 'Timestamp' && typeof (val as any).toDate === 'function') {
+            val = (val as any).toDate().toISOString();
+        }
+
         if (validCols.includes(key)) {
-            result[key] = value;
+            result[key] = val;
         } else if (key !== 'id') {
-            result.data[key] = value;
+            result.data[key] = val;
         }
     }
     return result;
@@ -249,11 +255,21 @@ export const onSnapshot = (queryObj: any, callbackOrObj: any, errorCallback?: an
 
 function mapToSupabaseData(obj: any): any {
     if (!obj) return null;
-    if (obj.data && typeof obj.data === 'object' && !Array.isArray(obj.data)) {
-        const { data, ...rest } = obj;
+    let baseObj = { ...obj };
+
+    // Convert root DB string ISO dates back to pseudo-Timestamps
+    if (baseObj.createdAt && typeof baseObj.createdAt === 'string') {
+        baseObj.createdAt = Timestamp.fromDate(new Date(baseObj.createdAt));
+    }
+    if (baseObj.lastLogin && typeof baseObj.lastLogin === 'string') {
+        baseObj.lastLogin = Timestamp.fromDate(new Date(baseObj.lastLogin));
+    }
+
+    if (baseObj.data && typeof baseObj.data === 'object' && !Array.isArray(baseObj.data)) {
+        const { data, ...rest } = baseObj;
         return { ...rest, ...data };
     }
-    return { ...obj };
+    return baseObj;
 }
 function mapFromSupabaseData(obj: any): any {
     return { ...obj };
