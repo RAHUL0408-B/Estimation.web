@@ -14,7 +14,7 @@ export const deleteApp = (app: any) => Promise.resolve();
 // --- SHIM FOR FIREBASE FIRESTORE --- //
 export const db = supabase;
 export const app = supabase;
-export const isFirebaseReady = true;
+export const isSupabaseReady = true;
 
 export class Timestamp {
     seconds: number;
@@ -114,7 +114,7 @@ export const getDocs = async (queryObj: any) => {
     const { data } = await builder;
     const items = data || [];
     const docs = items.map((item: any) => {
-        const docData = isGeneric ? item.data : mapToFirebaseData(item);
+        const docData = isGeneric ? item.data : mapToSupabaseData(item);
         const docId = isGeneric ? item.doc_id : (item.id || item.uid);
         return {
             id: docId,
@@ -142,7 +142,7 @@ export const getDoc = async (docRef: any) => {
     return {
         id: docRef.id,
         exists: () => !!data,
-        data: () => data ? (isGeneric ? mapToFirebaseData(data.data) : mapToFirebaseData(data)) : undefined,
+        data: () => data ? (isGeneric ? mapToSupabaseData(data.data) : mapToSupabaseData(data)) : undefined,
     };
 };
 
@@ -209,11 +209,11 @@ export const onSnapshot = (queryObj: any, callbackOrObj: any, errorCallback?: an
     return () => { }; // return unsubscribe function
 };
 
-function mapToFirebaseData(obj: any): any {
+function mapToSupabaseData(obj: any): any {
     const result = { ...obj };
     return result;
 }
-function mapFromFirebaseData(obj: any): any {
+function mapFromSupabaseData(obj: any): any {
     const result = { ...obj };
     return result;
 }

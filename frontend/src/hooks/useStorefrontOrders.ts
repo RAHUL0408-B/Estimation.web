@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { collection, query, where, onSnapshot, orderBy } from "@/lib/supabaseWrapper";
 import { Order } from "./useOrders";
 
 export function useStorefrontOrders({ tenantId, userEmail }: { tenantId: string, userEmail: string | null }) {

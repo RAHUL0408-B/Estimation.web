@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/supabaseClient";
 import {
     collection,
     onSnapshot,
@@ -12,7 +12,7 @@ import {
     query,
     orderBy,
     serverTimestamp,
-} from "@/lib/firebaseWrapper";
+} from "@/lib/supabaseWrapper";
 
 export interface City {
     id: string;

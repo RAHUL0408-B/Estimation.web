@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged, User } from "@/lib/firebaseWrapper";
-import { doc, getDoc } from "@/lib/firebaseWrapper";
+import { auth, db } from "@/lib/supabaseClient";
+import { onAuthStateChanged, User } from "@/lib/supabaseWrapper";
+import { doc, getDoc } from "@/lib/supabaseWrapper";
 
 export interface UserRoleData {
     uid: string;
@@ -20,11 +20,11 @@ export function useUserRole() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                setUser(firebaseUser);
+        const unsubscribe = onAuthStateChanged(auth, async (supabaseUser) => {
+            if (supabaseUser) {
+                setUser(supabaseUser);
                 try {
-                    const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+                    const userDoc = await getDoc(doc(db, "users", supabaseUser.uid));
                     if (userDoc.exists()) {
                         setRoleData(userDoc.data() as UserRoleData);
                     } else {

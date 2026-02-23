@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useTenantAuth } from "@/hooks/useTenantAuth";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/supabaseClient";
 import {
     collection,
     addDoc,
@@ -32,7 +32,7 @@ import {
     doc,
     deleteDoc,
     updateDoc
-} from "@/lib/firebaseWrapper";
+} from "@/lib/supabaseWrapper";
 import { Plus, Trash2, Edit, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,7 +40,7 @@ interface Employee {
     id: string;
     name: string;
     email: string;
-    password?: string; // Storing for demo simplicity; in prod use Firebase Auth
+    password?: string; // Storing for demo simplicity; in prod use Supabase Auth
     area: string;
     phone: string;
     totalWork: number;

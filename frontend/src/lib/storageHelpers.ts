@@ -1,8 +1,8 @@
-import { storage } from "./firebase";
-import { ref, uploadBytes, getDownloadURL } from "@/lib/firebaseWrapper";
+import { storage } from "./supabaseClient";
+import { ref, uploadBytes, getDownloadURL } from "@/lib/supabaseWrapper";
 
 /**
- * Uploads a file to Firebase Storage and returns the download URL
+ * Uploads a file to Supabase Storage and returns the download URL
  * @param file The file to upload
  * @param path The path in storage (e.g. "portfolio/tenantId/filename")
  */

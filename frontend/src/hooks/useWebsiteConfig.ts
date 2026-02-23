@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db, storage } from "@/lib/firebase";
-import { doc, onSnapshot, setDoc, serverTimestamp } from "@/lib/firebaseWrapper";
-import { ref, uploadBytes, getDownloadURL } from "@/lib/firebaseWrapper";
+import { db, storage } from "@/lib/supabaseClient";
+import { doc, onSnapshot, setDoc, serverTimestamp } from "@/lib/supabaseWrapper";
+import { ref, uploadBytes, getDownloadURL } from "@/lib/supabaseWrapper";
 
 export interface WebsiteConfig {
     brandName: string;

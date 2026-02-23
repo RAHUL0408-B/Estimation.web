@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from "@/lib/firebaseWrapper";
+import { auth, db } from "@/lib/supabaseClient";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from "@/lib/supabaseWrapper";
 import { getTenantByEmail, Tenant } from "@/lib/firestoreHelpers";
-import { doc, setDoc, serverTimestamp, updateDoc } from "@/lib/firebaseWrapper";
+import { doc, setDoc, serverTimestamp, updateDoc } from "@/lib/supabaseWrapper";
 
 // Cache tenant data to prevent re-fetching on every render
 const tenantCache: { [email: string]: { data: Tenant; timestamp: number } } = {};
@@ -23,11 +23,11 @@ export function useTenantAuth() {
             return;
         }
 
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                setUser(firebaseUser);
+        const unsubscribe = onAuthStateChanged(auth, async (supabaseUser) => {
+            if (supabaseUser) {
+                setUser(supabaseUser);
 
-                const email = firebaseUser.email || "";
+                const email = supabaseUser.email || "";
 
                 // Check cache first
                 const cached = tenantCache[email];
@@ -76,7 +76,7 @@ export function useTenantAuth() {
         setLoading(true);
 
         try {
-            // Sign in with Firebase Auth
+            // Sign in with Supabase Auth
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
             // Get tenant data
@@ -145,11 +145,11 @@ export function useTenantAuth() {
             console.error("Login error:", err);
             let message = "Invalid email or password";
             if (err.code === "auth/configuration-not-found") {
-                message = "Firebase Auth not configured correctly.";
+                message = "Supabase Auth not configured correctly.";
             } else if (err.code === "auth/unauthorized-domain") {
-                message = "This domain is not authorized in Firebase Console.";
+                message = "This domain is not authorized in Supabase Console.";
             } else if (err.message && err.message.includes("reading 'app'")) {
-                message = "Firebase initialization failed. Check environment variables.";
+                message = "Supabase initialization failed. Check environment variables.";
             } else if (err.message) {
                 message = `Error: ${err.message}`;
             }

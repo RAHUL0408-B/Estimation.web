@@ -19,8 +19,8 @@ import {
     DoorOpen,
     Lightbulb
 } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot } from "@/lib/supabaseWrapper";
 import { getTenantByStoreId } from "@/lib/firestoreHelpers";
 import HeroSlider from "@/components/storefront/HeroSlider";
 import TestimonialSlider from "@/components/storefront/TestimonialSlider";

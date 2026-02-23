@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { auth, db } from "@/lib/firebase";
+import { auth, db } from "@/lib/supabaseClient";
 import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -11,8 +11,8 @@ import {
     sendPasswordResetEmail,
     onAuthStateChanged,
     User
-} from "@/lib/firebaseWrapper";
-import { doc, getDoc, setDoc, serverTimestamp } from "@/lib/firebaseWrapper";
+} from "@/lib/supabaseWrapper";
+import { doc, getDoc, setDoc, serverTimestamp } from "@/lib/supabaseWrapper";
 
 export interface Customer {
     uid: string;
@@ -32,7 +32,7 @@ export function useCustomerAuth() {
 
     useEffect(() => {
         if (!auth) {
-            console.warn("Firebase Auth not initialized. Skipping auth state listener.");
+            console.warn("Supabase Auth not initialized. Skipping auth state listener.");
             setLoading(false);
             return;
         }

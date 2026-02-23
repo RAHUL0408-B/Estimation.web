@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { doc, onSnapshot, collection, query, where, getDocs, orderBy, limit, Timestamp } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { doc, onSnapshot, collection, query, where, getDocs, orderBy, limit, Timestamp } from "@/lib/supabaseWrapper";
 import { Tenant } from "@/lib/firestoreHelpers";
 
 export interface RecentOrder {

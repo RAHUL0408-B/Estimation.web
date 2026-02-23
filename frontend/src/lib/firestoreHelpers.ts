@@ -1,4 +1,4 @@
-import { db } from "./firebase";
+import { db } from "./supabaseClient";
 import {
     collection,
     doc,
@@ -10,7 +10,7 @@ import {
     where,
     getDocs,
     getDoc,
-} from "@/lib/firebaseWrapper";
+} from "@/lib/supabaseWrapper";
 
 export interface Tenant {
     id: string;

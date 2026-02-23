@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from "@/lib/firebaseWrapper";
+import { auth } from "@/lib/supabaseClient";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from "@/lib/supabaseWrapper";
 import { useRouter } from "next/navigation";
 import { getTenantByEmail } from "@/lib/firestoreHelpers";
 
@@ -12,13 +12,13 @@ export function useAdminAuth() {
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (supabaseUser) => {
             setLoading(true);
-            if (firebaseUser?.email) {
+            if (supabaseUser?.email) {
                 try {
-                    console.log("Checking admin status for:", firebaseUser.email);
+                    console.log("Checking admin status for:", supabaseUser.email);
                     // Check if this user is a tenant
-                    const tenant = await getTenantByEmail(firebaseUser.email);
+                    const tenant = await getTenantByEmail(supabaseUser.email);
 
                     if (tenant) {
                         // User is a tenant, NOT a super admin. Deny access.
@@ -27,14 +27,14 @@ export function useAdminAuth() {
                     } else {
                         // User is authenticated and NOT a tenant -> Assume Super Admin
                         console.log("Super Admin confirmed (Not a tenant)");
-                        setUser(firebaseUser);
+                        setUser(supabaseUser);
                     }
                 } catch (error) {
                     console.error("Critical error checking admin status:", error);
                     // If check fails (e.g. firestore rules), we might be a super admin 
                     // or just having network issues. To be safe in dev, let's allow 
                     // but log it.
-                    setUser(firebaseUser);
+                    setUser(supabaseUser);
                 }
             } else {
                 setUser(null);

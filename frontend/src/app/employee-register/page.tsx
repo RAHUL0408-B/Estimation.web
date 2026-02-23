@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Briefcase, User, Search, CheckCircle2 } from "lucide-react";
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from "@/lib/firebaseWrapper";
-import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from "@/lib/supabaseWrapper";
+import { db } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface TenantInfo {
@@ -108,7 +108,7 @@ export default function EmployeeRegisterPage() {
                 email: formData.email,
                 phone: formData.phone,
                 area: formData.area,
-                password: formData.password, // Ideally hash this or use Firebase Auth
+                password: formData.password, // Ideally hash this or use Supabase Auth
                 tenantId: foundTenant.id,
                 totalWork: 0,
                 currentWork: "None",

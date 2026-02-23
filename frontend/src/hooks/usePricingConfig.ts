@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { doc, onSnapshot, setDoc, serverTimestamp } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { doc, onSnapshot, setDoc, serverTimestamp } from "@/lib/supabaseWrapper";
 
 // New three-tier pricing structure
 export interface PricingItem {

@@ -1,6 +1,6 @@
 
-import { db } from "@/lib/firebase";
-import { collection, getDocs, addDoc, serverTimestamp, query, limit } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { collection, getDocs, addDoc, serverTimestamp, query, limit } from "@/lib/supabaseWrapper";
 
 const samplePortfolio = [
     {

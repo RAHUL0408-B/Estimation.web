@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
-import { doc, onSnapshot, getDoc, collection, query, where, Timestamp, updateDoc, arrayUnion, writeBatch, serverTimestamp } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { doc, onSnapshot, getDoc, collection, query, where, Timestamp, updateDoc, arrayUnion, writeBatch, serverTimestamp } from "@/lib/supabaseWrapper";
 import { Loader2, LogOut, Briefcase, Phone, MapPin, User, CheckCircle, Clock, FileText, MessageSquare, Calendar, ChevronRight, Activity, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";

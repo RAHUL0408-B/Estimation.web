@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } from "@/lib/supabaseWrapper";
 
 export interface Project {
     id: string;

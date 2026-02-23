@@ -44,8 +44,8 @@ import {
     DialogContent,
     DialogClose,
 } from "@/components/ui/dialog";
-import { doc, updateDoc } from "@/lib/firebaseWrapper";
-import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "@/lib/supabaseWrapper";
+import { db } from "@/lib/supabaseClient";
 import { motion } from "framer-motion";
 
 import { generateSampleData } from "@/lib/sampleData";

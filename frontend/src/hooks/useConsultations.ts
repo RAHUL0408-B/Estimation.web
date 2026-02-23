@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { collection, query, where, onSnapshot, doc, updateDoc } from "@/lib/supabaseWrapper";
 
 export interface ConsultationRequest {
     id: string;

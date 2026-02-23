@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "@/lib/firebaseWrapper";
+import { storage } from "@/lib/supabaseClient";
+import { ref, uploadBytes, getDownloadURL } from "@/lib/supabaseWrapper";
 
 export async function POST(req: NextRequest) {
     try {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         // Convert the File out to a native Buffer safely across differing backend Node environments
         const buffer = Buffer.from(await file.arrayBuffer());
 
-        // Upload to Firebase/Supabase Storage
+        // Upload to Supabase/Supabase Storage
         const snapshot = await uploadBytes(storageRef, buffer, {
             contentType: file.type || "application/octet-stream",
         });

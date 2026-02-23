@@ -14,8 +14,8 @@ import { usePricingConfig, PricingItem } from "@/hooks/usePricingConfig";
 import { useCities } from "@/hooks/useCities";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { usePublicWebsiteConfig } from "@/hooks/useWebsiteConfig";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { collection, addDoc, serverTimestamp } from "@/lib/supabaseWrapper";
 import { getTenantByStoreId, Tenant } from "@/lib/firestoreHelpers";
 import { generateEstimatePDF } from "@/lib/generateEstimatePdf";
 import { useToast } from "@/hooks/use-toast";
@@ -495,7 +495,7 @@ export default function EstimatorPage({ params }: { params: Promise<{ tenantId: 
             return;
         }
 
-        // Check if user is authenticated via Firebase Auth
+        // Check if user is authenticated via Supabase Auth
         if (!customer && !isAdmin) {
             // User is not logged in - save form data to sessionStorage
             const formData = {

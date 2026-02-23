@@ -1,8 +1,8 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { db, storage } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "@/lib/firebaseWrapper";
-import { ref, uploadBytes, getDownloadURL } from "@/lib/firebaseWrapper";
+import { db, storage } from "@/lib/supabaseClient";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "@/lib/supabaseWrapper";
+import { ref, uploadBytes, getDownloadURL } from "@/lib/supabaseWrapper";
 
 interface EstimateData {
     customerInfo: {
@@ -318,7 +318,7 @@ export async function generateEstimatePDF(
 
         let pdfUrl: string | undefined;
 
-        // Upload to Firebase Storage if enabled
+        // Upload to Supabase Storage if enabled
         if (options.uploadToStorage) {
             try {
                 const pdfBlob = pdf.output("blob");

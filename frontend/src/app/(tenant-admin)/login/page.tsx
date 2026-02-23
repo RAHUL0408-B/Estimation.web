@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { useTenantAuth } from "@/hooks/useTenantAuth";
 import { Mail, Lock, User, Briefcase, ArrowRight, Shield } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { collectionGroup, query, where, getDocs } from "@/lib/firebaseWrapper";
-import { db } from "@/lib/firebase";
+import { collectionGroup, query, where, getDocs } from "@/lib/supabaseWrapper";
+import { db } from "@/lib/supabaseClient";
 import { motion } from "framer-motion";
 
 export default function TenantLoginPage() {

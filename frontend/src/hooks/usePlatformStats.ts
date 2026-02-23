@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, onSnapshot, Timestamp } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { collection, onSnapshot, Timestamp } from "@/lib/supabaseWrapper";
 import { Tenant, calculateGrowthRate } from "@/lib/firestoreHelpers";
 
 export interface PlatformStats {

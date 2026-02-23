@@ -7,9 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createUserWithEmailAndPassword } from "@/lib/firebaseWrapper";
-import { doc, setDoc, serverTimestamp } from "@/lib/firebaseWrapper";
-import { auth, db } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "@/lib/supabaseWrapper";
+import { doc, setDoc, serverTimestamp } from "@/lib/supabaseWrapper";
+import { auth, db } from "@/lib/supabaseClient";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { ShieldCheck, Mail, Lock, User, Loader2, ChevronLeft } from "lucide-react";
 
@@ -58,7 +58,7 @@ export default function AdminSignupPage() {
                 return;
             }
 
-            // Create Firebase Auth account
+            // Create Supabase Auth account
             const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
 
             // Create Super Admin record in 'users' collection

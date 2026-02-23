@@ -2,8 +2,8 @@
 
 import { useEffect, useState, use } from "react";
 import { Loader2 } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot, doc, getDoc } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { collection, query, orderBy, onSnapshot, doc, getDoc } from "@/lib/supabaseWrapper";
 import { getTenantByStoreId } from "@/lib/firestoreHelpers";
 import type { PortfolioProject, ThemeConfig } from "@/types/website";
 

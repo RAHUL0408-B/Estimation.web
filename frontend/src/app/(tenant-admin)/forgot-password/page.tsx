@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { sendPasswordResetEmail } from "@/lib/firebaseWrapper";
-import { auth } from "@/lib/firebase";
+import { sendPasswordResetEmail } from "@/lib/supabaseWrapper";
+import { auth } from "@/lib/supabaseClient";
 import { Mail } from "lucide-react";
 
 export default function ForgotPasswordPage() {

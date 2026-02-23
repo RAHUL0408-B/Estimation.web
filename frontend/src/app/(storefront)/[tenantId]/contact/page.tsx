@@ -2,8 +2,8 @@
 
 import { use, useEffect, useState } from "react";
 import { Loader2, MapPin, Clock, Phone, Mail, MessageCircle, Instagram, Facebook } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { doc, getDoc } from "@/lib/supabaseWrapper";
 import { getTenantByStoreId } from "@/lib/firestoreHelpers";
 import type { ContactPageContent, BrandConfig, ThemeConfig } from "@/types/website";
 

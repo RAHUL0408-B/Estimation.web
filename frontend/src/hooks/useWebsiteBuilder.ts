@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db, storage } from "@/lib/firebase";
+import { db, storage } from "@/lib/supabaseClient";
 import {
     doc,
     collection,
@@ -14,8 +14,8 @@ import {
     query,
     orderBy,
     getDocs,
-} from "@/lib/firebaseWrapper";
-import { ref, uploadBytes, getDownloadURL } from "@/lib/firebaseWrapper";
+} from "@/lib/supabaseWrapper";
+import { ref, uploadBytes, getDownloadURL } from "@/lib/supabaseWrapper";
 import type {
     BrandConfig,
     ThemeConfig,

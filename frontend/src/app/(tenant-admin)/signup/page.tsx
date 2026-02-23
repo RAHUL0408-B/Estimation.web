@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createUserWithEmailAndPassword } from "@/lib/firebaseWrapper";
-import { auth } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "@/lib/supabaseWrapper";
+import { auth } from "@/lib/supabaseClient";
 import { addDesigner, generateStoreId } from "@/lib/firestoreHelpers";
 import { ArrowRight, Shield } from "lucide-react";
 import { motion } from "framer-motion";
@@ -59,7 +59,7 @@ export default function SignupPage() {
                 return;
             }
 
-            // Create Firebase Auth account
+            // Create Supabase Auth account
             const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
 
             // Create active tenant record in Firestore

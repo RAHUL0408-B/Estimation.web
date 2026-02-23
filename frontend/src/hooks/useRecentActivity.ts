@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, onSnapshot } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { collection, query, orderBy, limit, onSnapshot } from "@/lib/supabaseWrapper";
 import { Activity, formatRelativeTime } from "@/lib/firestoreHelpers";
 
 export interface ActivityWithTime extends Activity {

@@ -2,8 +2,8 @@
 
 import { use, useEffect, useState } from "react";
 import { Loader2, Award, Target, Eye } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, getDocs, query, orderBy } from "@/lib/firebaseWrapper";
+import { db } from "@/lib/supabaseClient";
+import { doc, getDoc, collection, getDocs, query, orderBy } from "@/lib/supabaseWrapper";
 import { getTenantByStoreId } from "@/lib/firestoreHelpers";
 import type { AboutUsContent, ThemeConfig, TeamMember } from "@/types/website";
 

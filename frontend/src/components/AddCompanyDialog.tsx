@@ -12,8 +12,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { initializeApp, deleteApp, getApps } from "@/lib/firebaseWrapper";
-import { getAuth, createUserWithEmailAndPassword } from "@/lib/firebaseWrapper";
+import { initializeApp, deleteApp, getApps } from "@/lib/supabaseWrapper";
+import { getAuth, createUserWithEmailAndPassword } from "@/lib/supabaseWrapper";
 import { addDesigner, generateStoreId } from "@/lib/firestoreHelpers";
 
 interface AddCompanyDialogProps {

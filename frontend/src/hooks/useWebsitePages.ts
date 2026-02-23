@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db, storage } from "@/lib/firebase";
+import { db, storage } from "@/lib/supabaseClient";
 import {
     collection,
     doc,
@@ -12,8 +12,8 @@ import {
     serverTimestamp,
     query,
     orderBy,
-} from "@/lib/firebaseWrapper";
-import { ref, uploadBytes, getDownloadURL } from "@/lib/firebaseWrapper";
+} from "@/lib/supabaseWrapper";
+import { ref, uploadBytes, getDownloadURL } from "@/lib/supabaseWrapper";
 
 export interface PageSection {
     id: string;

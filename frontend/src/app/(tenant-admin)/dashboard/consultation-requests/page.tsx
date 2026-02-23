@@ -23,8 +23,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { collection, getDocs } from "@/lib/firebaseWrapper";
-import { db } from "@/lib/firebase";
+import { collection, getDocs } from "@/lib/supabaseWrapper";
+import { db } from "@/lib/supabaseClient";
 
 interface Employee {
     id: string;

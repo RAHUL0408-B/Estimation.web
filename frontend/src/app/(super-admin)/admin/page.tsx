@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "@/lib/firebaseWrapper";
-import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "@/lib/supabaseWrapper";
+import { auth } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
