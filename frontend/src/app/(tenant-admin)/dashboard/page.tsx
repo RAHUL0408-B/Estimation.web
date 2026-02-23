@@ -148,7 +148,7 @@ export default function TenantDashboardPage() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                     <div className="space-y-1">
                         <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 uppercase tracking-[0.05em]">Analytics Overview</h1>
-                        <p className="text-lg text-slate-500 font-medium">Welcome back, {tenant.name.split(' ')[0]}. Here's your business performance today.</p>
+                        <p className="text-lg text-slate-500 font-medium">Welcome back, {(tenant.name || "Admin").split(' ')[0]}. Here's your business performance today.</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
