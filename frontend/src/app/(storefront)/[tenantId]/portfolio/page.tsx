@@ -206,7 +206,7 @@ export default function PortfolioPage({ params }: { params: Promise<{ tenantId: 
                     onClick={() => setSelectedProject(null)}
                 >
                     <div
-                        className={`bg-white rounded-2xl w-full max-h-[90vh] overflow-y-auto ${(!selectedProject.imageStyle || selectedProject.imageStyle === 'single')
+                        className={`bg-card rounded-2xl w-full max-h-[90vh] overflow-y-auto ${(!selectedProject.imageStyle || selectedProject.imageStyle === 'single')
                             ? 'max-w-4xl' : 'max-w-6xl'}`}
                         onClick={(e) => e.stopPropagation()}
                     >

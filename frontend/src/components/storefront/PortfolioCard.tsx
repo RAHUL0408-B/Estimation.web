@@ -25,7 +25,7 @@ export default function PortfolioCard({ project, index }: PortfolioCardProps) {
 
     return (
         <div
-            className="group relative overflow-hidden rounded-3xl bg-white shadow-lg transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border border-gray-100"
+            className="group relative overflow-hidden rounded-3xl bg-card shadow-lg transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border border-gray-100"
             style={{ animationDelay: `${index * 100}ms` }}
         >
             <div className="aspect-[4/3] overflow-hidden relative">

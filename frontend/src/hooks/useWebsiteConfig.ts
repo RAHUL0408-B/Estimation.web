@@ -21,6 +21,7 @@ export interface WebsiteConfig {
     accentColor?: string;
     buttonRadius?: number;
     backgroundColor?: string;
+    cardColor?: string;
     fontStyle?: "modern" | "elegant" | "minimal";
     updatedAt?: any;
 }
@@ -146,7 +147,7 @@ export function usePublicWebsiteConfig(storeSlug: string) {
                 setConfig(defaultConfig);
                 setLoading(false);
             }
-        }, 3000); // 3 second timeout
+        }, 10000); // 10 second timeout
 
         const resolveTenant = async () => {
             try {
@@ -169,6 +170,8 @@ export function usePublicWebsiteConfig(storeSlug: string) {
                 clearTimeout(timeoutId);
             } catch (error) {
                 console.error("Error resolving tenant:", error);
+                // On error, try to use defaults but keep loading if possible? 
+                // No, just show defaults so the page doesn't hang.
                 setConfig(defaultConfig);
                 setLoading(false);
                 clearTimeout(timeoutId);
@@ -194,26 +197,21 @@ export function usePublicWebsiteConfig(storeSlug: string) {
         const themeRef = doc(db, "tenants", tenantId, "theme", "config");
 
         const updateConfig = () => {
-            setConfig({
-                ...defaultConfig,
+            setConfig((prev) => ({
+                ...(prev || defaultConfig),
                 ...brandData,
                 ...themeData,
-            } as WebsiteConfig);
+            }) as WebsiteConfig);
             setLoading(false);
         };
-
-        const timeoutId = setTimeout(() => {
-            if (loading) {
-                console.warn(`Timeout fetching config for tenant: ${tenantId}. Using defaults.`);
-                setConfig(defaultConfig);
-                setLoading(false);
-            }
-        }, 3000);
 
         const unsubBrand = onSnapshot(brandRef, (snapshot) => {
             if (snapshot.exists()) {
                 brandData = snapshot.data();
                 updateConfig();
+            } else {
+                // If it doesn't exist, we still want to stop loading
+                setLoading(false);
             }
         });
 
@@ -221,13 +219,14 @@ export function usePublicWebsiteConfig(storeSlug: string) {
             if (snapshot.exists()) {
                 themeData = snapshot.data();
                 updateConfig();
+            } else {
+                setLoading(false);
             }
         });
 
         return () => {
             unsubBrand();
             unsubTheme();
-            clearTimeout(timeoutId);
         };
     }, [tenantId]);
 

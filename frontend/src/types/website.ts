@@ -24,6 +24,7 @@ export interface ThemeConfig {
     buttonRadius: number; // in pixels
     cardShadow: boolean;
     backgroundColor?: string;
+    cardColor?: string;
     updatedAt?: any;
 }
 

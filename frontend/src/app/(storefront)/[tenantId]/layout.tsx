@@ -94,6 +94,7 @@ export default function StorefrontLayout({
         document.documentElement.style.setProperty('--accent', config.accentColor || '#6366f1'); // Default accent
         document.documentElement.style.setProperty('--button-radius', `${config.buttonRadius || 8}px`); // Default button radius
         document.documentElement.style.setProperty('--background', config.backgroundColor || '#ffffff');
+        document.documentElement.style.setProperty('--card', config.cardColor || '#ffffff');
 
         // Set font family based on fontStyle
         let fontFamily = 'Inter, system-ui, sans-serif'; // default modern

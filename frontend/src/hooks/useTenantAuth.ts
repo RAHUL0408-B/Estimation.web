@@ -49,43 +49,50 @@ export function useTenantAuth() {
                     let tenantData = await getTenantByEmail(email);
 
                     // Auto-provision if missing (e.g. from Google OAuth)
+                    // We check if it's really missing, and not just returning null because of an error
                     if (!tenantData && supabaseUser) {
                         try {
-                            const { collection, addDoc, serverTimestamp, setDoc, doc } = await import('@/lib/supabaseWrapper');
-                            const { generateStoreId } = await import('@/lib/firestoreHelpers');
-                            const name = supabaseUser.user_metadata?.full_name || email.split('@')[0] || "User";
-                            const businessName = `${name}'s Workspace`;
+                            // Double-check one more time before committing to creation
+                            const secondCheck = await getTenantByEmail(email);
+                            if (secondCheck) {
+                                tenantData = secondCheck;
+                            } else {
+                                const { collection, addDoc, serverTimestamp, setDoc, doc } = await import('@/lib/supabaseWrapper');
+                                const { generateStoreId } = await import('@/lib/firestoreHelpers');
+                                const name = supabaseUser.user_metadata?.full_name || email.split('@')[0] || "User";
+                                const businessName = `${name}'s Workspace`;
 
-                            // Create their tenant
-                            const tenantRef = await addDoc(collection(db, "tenants"), {
-                                ownerUid: supabaseUser.uid,
-                                ownerName: name,
-                                businessName: businessName,
-                                storeId: generateStoreId(businessName),
-                                email: email,
-                                mobile: "",
-                                subscription: { plan: 'free', status: 'active', startDate: new Date().toISOString() },
-                                status: "active",
-                                revenue: { total: 0, thisMonth: 0, lastMonth: 0 },
-                                settings: { autoApproval: false, notifications: true },
-                                createdAt: serverTimestamp(),
-                                lastLogin: serverTimestamp()
-                            });
+                                // Create their tenant
+                                const tenantRef = await addDoc(collection(db, "tenants"), {
+                                    ownerUid: supabaseUser.uid,
+                                    ownerName: name,
+                                    businessName: businessName,
+                                    storeId: generateStoreId(businessName),
+                                    email: email,
+                                    mobile: "",
+                                    subscription: { plan: 'free', status: 'active', startDate: new Date().toISOString() },
+                                    status: "active",
+                                    revenue: { total: 0, thisMonth: 0, lastMonth: 0 },
+                                    settings: { autoApproval: false, notifications: true },
+                                    createdAt: serverTimestamp(),
+                                    lastLogin: serverTimestamp()
+                                });
 
-                            // Create their user record mapping to the tenant
-                            await setDoc(doc(db, "users", supabaseUser.uid), {
-                                uid: supabaseUser.uid,
-                                email: email,
-                                role: "admin",
-                                tenantId: tenantRef.id,
-                                name: name,
-                                mobile: "",
-                                createdAt: serverTimestamp(),
-                                lastLogin: serverTimestamp()
-                            });
+                                // Create their user record mapping to the tenant
+                                await setDoc(doc(db, "users", supabaseUser.uid), {
+                                    uid: supabaseUser.uid,
+                                    email: email,
+                                    role: "admin",
+                                    tenantId: tenantRef.id,
+                                    name: name,
+                                    mobile: "",
+                                    createdAt: serverTimestamp(),
+                                    lastLogin: serverTimestamp()
+                                });
 
-                            // Set the newly minted tenantData
-                            tenantData = await getTenantByEmail(email);
+                                // Set the newly minted tenantData
+                                tenantData = await getTenantByEmail(email);
+                            }
                         } catch (provisionError) {
                             console.error("Failed to auto-provision tenant from OAuth:", provisionError);
                         }

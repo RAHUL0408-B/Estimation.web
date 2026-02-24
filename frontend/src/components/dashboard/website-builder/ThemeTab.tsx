@@ -24,7 +24,6 @@ interface ThemeTabProps {
 export default function ThemeTab({ tenantId }: ThemeTabProps) {
     const { theme, loading, saving, saveTheme } = useTheme(tenantId);
     const { toast } = useToast();
-
     const [formData, setFormData] = useState({
         primaryColor: "#ea580c",
         secondaryColor: "#1c1917",
@@ -33,6 +32,7 @@ export default function ThemeTab({ tenantId }: ThemeTabProps) {
         buttonRadius: 8,
         cardShadow: true,
         backgroundColor: "#ffffff",
+        cardColor: "#ffffff",
     });
 
     useEffect(() => {
@@ -45,6 +45,7 @@ export default function ThemeTab({ tenantId }: ThemeTabProps) {
                 buttonRadius: theme.buttonRadius || 8,
                 cardShadow: theme.cardShadow ?? true,
                 backgroundColor: theme.backgroundColor || "#ffffff",
+                cardColor: theme.cardColor || "#ffffff",
             });
         }
     }, [theme]);
@@ -189,6 +190,32 @@ export default function ThemeTab({ tenantId }: ThemeTabProps) {
                             />
                             <p className="text-xs text-gray-500">The main background color of your website</p>
                         </div>
+
+                        {/* Card Background Color */}
+                        <div className="space-y-3">
+                            <Label className="text-sm font-medium">Card Color</Label>
+                            <div className="flex gap-3">
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={formData.cardColor}
+                                        onChange={(e) => handleColorChange("cardColor", e.target.value)}
+                                        className="h-12 w-12 rounded-lg border-2 border-gray-200 cursor-pointer"
+                                    />
+                                </div>
+                                <Input
+                                    value={formData.cardColor}
+                                    onChange={(e) => handleColorChange("cardColor", e.target.value)}
+                                    className="font-mono uppercase h-12 rounded-lg"
+                                    placeholder="#ffffff"
+                                />
+                            </div>
+                            <div
+                                className="h-16 rounded-lg border-2 border-gray-200"
+                                style={{ backgroundColor: formData.cardColor }}
+                            />
+                            <p className="text-xs text-gray-500">The background color for cards and sections</p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -301,6 +328,7 @@ export default function ThemeTab({ tenantId }: ThemeTabProps) {
                         <div
                             className={`p-6 rounded-xl border-2 border-gray-200 ${formData.cardShadow ? "shadow-lg" : ""
                                 }`}
+                            style={{ backgroundColor: formData.cardColor }}
                         >
                             <h4 className="font-semibold mb-2">Sample Card</h4>
                             <p className="text-sm text-gray-600">

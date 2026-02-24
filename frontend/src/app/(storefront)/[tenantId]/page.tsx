@@ -308,7 +308,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                         {displayServices.map((service) => (
                             <div
                                 key={service.id}
-                                className="bg-white p-8 rounded-[32px] shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-slate-100 group"
+                                className="bg-card p-8 rounded-[32px] shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-slate-100 group"
                             >
                                 <div className="mb-6 h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center group-hover:bg-white transition-colors">
                                     {service.icon}
@@ -424,7 +424,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                 data-scroll-animate
             >
                 <div className="container mx-auto px-4">
-                    <div className="max-w-6xl mx-auto bg-white rounded-[40px] shadow-2xl overflow-hidden grid md:grid-cols-2">
+                    <div className="max-w-6xl mx-auto bg-card rounded-[40px] shadow-2xl overflow-hidden grid md:grid-cols-2">
                         <div className="p-12 md:p-16 space-y-8" style={{ backgroundColor: secondaryColor }}>
                             <div className="space-y-4">
                                 <h2 className="text-4xl font-bold text-white">Get in Touch</h2>

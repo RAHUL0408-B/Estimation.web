@@ -85,6 +85,12 @@ export function useBrand(tenantId: string | null) {
                 },
                 { merge: true }
             );
+
+            // Also update the main tenant document's businessName for consistency
+            if (updates.brandName) {
+                const tenantRef = doc(db, "tenants", tenantId);
+                await updateDoc(tenantRef, { businessName: updates.brandName });
+            }
             return true;
         } catch (error) {
             console.error("Error saving brand:", error);

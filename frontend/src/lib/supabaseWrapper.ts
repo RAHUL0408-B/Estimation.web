@@ -147,8 +147,12 @@ export const getDocs = async (queryObj: any) => {
             }
         }
     }
-    const { data } = await builder;
-    const items = data || [];
+    const response = await builder;
+    if (response.error) {
+        console.error(`getDocs error [${table}]:`, response.error);
+        return { docs: [], empty: true, size: 0 };
+    }
+    const items = response.data || [];
     const docs = items.map((item: any) => {
         const docData = isGeneric ? item.data : mapToSupabaseData(item);
         const docId = isGeneric ? item.doc_id : (item.id || item.uid);
