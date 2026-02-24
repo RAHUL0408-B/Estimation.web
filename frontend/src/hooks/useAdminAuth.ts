@@ -3,38 +3,37 @@
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/supabaseClient";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from "@/lib/supabaseWrapper";
-import { useRouter } from "next/navigation";
-import { getTenantByEmail } from "@/lib/firestoreHelpers";
+
+// Super admin emails — add yours here or set NEXT_PUBLIC_SUPER_ADMIN_EMAILS env var
+// Format for env var: "admin1@example.com,admin2@example.com"
+function isSuperAdmin(email: string): boolean {
+    const envEmails = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || "";
+    const allowedEmails = envEmails
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+
+    // Fallback hardcoded emails if env not set
+    const fallbackEmails = ["avvi.mee@gmail.com"];
+
+    const allAllowed = allowedEmails.length > 0 ? allowedEmails : fallbackEmails;
+    return allAllowed.includes(email.toLowerCase());
+}
 
 export function useAdminAuth() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (supabaseUser) => {
             setLoading(true);
             if (supabaseUser?.email) {
-                try {
-                    console.log("Checking admin status for:", supabaseUser.email);
-                    // Check if this user is a tenant
-                    const tenant = await getTenantByEmail(supabaseUser.email);
-
-                    if (tenant) {
-                        // User is a tenant, NOT a super admin. Deny access.
-                        console.warn("Access Denied: Tenant user attempted to access Super Admin panel.");
-                        setUser(null);
-                    } else {
-                        // User is authenticated and NOT a tenant -> Assume Super Admin
-                        console.log("Super Admin confirmed (Not a tenant)");
-                        setUser(supabaseUser);
-                    }
-                } catch (error) {
-                    console.error("Critical error checking admin status:", error);
-                    // If check fails (e.g. firestore rules), we might be a super admin 
-                    // or just having network issues. To be safe in dev, let's allow 
-                    // but log it.
+                if (isSuperAdmin(supabaseUser.email)) {
+                    console.log("Super Admin confirmed:", supabaseUser.email);
                     setUser(supabaseUser);
+                } else {
+                    console.warn("Access Denied: Not a super admin email:", supabaseUser.email);
+                    setUser(null);
                 }
             } else {
                 setUser(null);
@@ -46,6 +45,10 @@ export function useAdminAuth() {
     }, []);
 
     const login = async (email: string, password: string) => {
+        if (!isSuperAdmin(email)) {
+            console.warn("Login blocked: Not a super admin email.");
+            return false;
+        }
         try {
             await signInWithEmailAndPassword(auth, email, password);
             return true;
@@ -58,7 +61,6 @@ export function useAdminAuth() {
     const logout = async () => {
         try {
             await signOut(auth);
-            // Use window.location.href to ensure a full page reload and clean state
             window.location.href = "/admin/login";
         } catch (error) {
             console.error("Logout failed", error);
