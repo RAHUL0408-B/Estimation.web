@@ -10,6 +10,7 @@ import { Loader2, Mail } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import Link from "next/link";
 import { getTenantByStoreId } from "@/lib/firestoreHelpers";
+import { signInWithGoogle } from "@/lib/supabaseWrapper";
 
 export default function CustomerLoginPage({ params }: { params: Promise<{ tenantId: string }> }) {
     const { tenantId } = use(params);
@@ -114,7 +115,7 @@ export default function CustomerLoginPage({ params }: { params: Promise<{ tenant
                             variant="outline"
                             className="w-full bg-white hover:bg-gray-50 text-black border-gray-200 h-12 rounded-lg text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-2"
                             onClick={async () => {
-                                await window.location.assign('https://bgrxmhvowawznojdggnl.supabase.co/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(window.location.origin + '/' + tenantId + '/estimate'));
+                                await signInWithGoogle(window.location.origin + '/' + tenantId + '/estimate');
                             }}
                             disabled={isLoading}
                         >

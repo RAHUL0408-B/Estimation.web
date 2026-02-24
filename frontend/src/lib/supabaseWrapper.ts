@@ -315,8 +315,15 @@ export const createUserWithEmailAndPassword = async (authInstance: any, email: s
     return { user: { uid: data.user.id, email: data.user.email as string } };
 };
 
-export const signInWithPopup = async (authInstance: any, provider: any) => {
-    return { user: { uid: "stub", email: "stub@example.com", displayName: "", photoURL: "" } as User };
+export const signInWithGoogle = async (redirectTo?: string) => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: redirectTo || (window.location.origin + '/dashboard'),
+        },
+    });
+    if (error) throw error;
+    return data;
 };
 
 export class GoogleAuthProvider {

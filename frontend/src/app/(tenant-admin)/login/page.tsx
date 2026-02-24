@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useTenantAuth } from "@/hooks/useTenantAuth";
 import { Mail, Lock, User, Briefcase, ArrowRight, Shield } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { collectionGroup, query, where, getDocs } from "@/lib/supabaseWrapper";
+import { collectionGroup, query, where, getDocs, signInWithGoogle } from "@/lib/supabaseWrapper";
 import { db } from "@/lib/supabaseClient";
 import { motion } from "framer-motion";
 
@@ -187,7 +187,7 @@ export default function TenantLoginPage() {
                                         variant="outline"
                                         className="w-full bg-white hover:bg-gray-50 text-black border-gray-200 h-12 rounded-lg text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-2"
                                         onClick={async () => {
-                                            await window.location.assign('https://bgrxmhvowawznojdggnl.supabase.co/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(window.location.origin + '/dashboard'));
+                                            await signInWithGoogle(window.location.origin + '/dashboard');
                                         }}
                                         disabled={designerLoading}
                                     >

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createUserWithEmailAndPassword } from "@/lib/supabaseWrapper";
+import { createUserWithEmailAndPassword, signInWithGoogle } from "@/lib/supabaseWrapper";
 import { auth } from "@/lib/supabaseClient";
 import { addDesigner, generateStoreId } from "@/lib/firestoreHelpers";
 import { ArrowRight, Shield } from "lucide-react";
@@ -241,7 +241,7 @@ export default function SignupPage() {
                                     variant="outline"
                                     className="w-full bg-white hover:bg-gray-50 text-black border-gray-200 h-12 rounded-lg text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-2"
                                     onClick={async () => {
-                                        await window.location.assign('https://bgrxmhvowawznojdggnl.supabase.co/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(window.location.origin + '/dashboard'));
+                                        await signInWithGoogle(window.location.origin + '/dashboard');
                                     }}
                                     disabled={loading}
                                 >

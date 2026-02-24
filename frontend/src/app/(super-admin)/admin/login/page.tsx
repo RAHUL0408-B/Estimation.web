@@ -8,6 +8,7 @@ import { Lock, Mail, Loader2, ShieldCheck } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signInWithGoogle } from "@/lib/supabaseWrapper";
 
 export default function AdminLoginPage() {
     const [email, setEmail] = useState("");
@@ -126,7 +127,7 @@ export default function AdminLoginPage() {
                             variant="outline"
                             className="w-full bg-white hover:bg-gray-50 text-black border-gray-200 h-11 rounded-lg text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-2"
                             onClick={async () => {
-                                await window.location.assign('https://bgrxmhvowawznojdggnl.supabase.co/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(window.location.origin + '/admin/dashboard'));
+                                await signInWithGoogle(window.location.origin + '/admin/dashboard');
                             }}
                             disabled={loading}
                         >
