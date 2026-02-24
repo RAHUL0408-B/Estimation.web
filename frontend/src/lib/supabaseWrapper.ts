@@ -217,7 +217,10 @@ export const getDoc = async (docRef: any) => {
     } else {
         builder = builder.eq('id', docRef.id);
     }
-    const { data } = await builder.single();
+    const { data, error } = await builder.maybeSingle();
+    if (error) {
+        console.error(`getDoc error for ${docRef.path}/${docRef.id}:`, error);
+    }
     return {
         id: docRef.id,
         exists: () => !!data,
@@ -256,16 +259,16 @@ export const addDoc = async (collectionRef: any, data: any) => {
 export const setDoc = async (docRef: any, data: any, options?: { merge: boolean }) => {
     const { table, isGeneric } = getTableConfig(docRef.path);
     if (isGeneric) {
-        const existing = await supabase.from(table).select('data').eq('collection_path', docRef.path).eq('doc_id', docRef.id).single();
-        const newData = options?.merge && existing.data ? { ...existing.data.data, ...data } : data;
+        const { data: existingData } = await supabase.from(table).select('data').eq('collection_path', docRef.path).eq('doc_id', docRef.id).maybeSingle();
+        const newData = options?.merge && existingData ? { ...existingData.data, ...data } : data;
         const { error } = await supabase.from(table).upsert({ collection_path: docRef.path, doc_id: docRef.id, data: newData }, { onConflict: 'collection_path,doc_id' });
         if (error) console.error("setDoc generic err:", error);
     } else {
         let payload = prepareRelationalData(table, data);
         if (options?.merge) {
-            const existing = await supabase.from(table).select('data').eq('id', docRef.id).single();
-            if (existing.data?.data) {
-                payload.data = { ...existing.data.data, ...payload.data };
+            const { data: existingData } = await supabase.from(table).select('data').eq('id', docRef.id).maybeSingle();
+            if (existingData?.data) {
+                payload.data = { ...existingData.data, ...payload.data };
             }
         }
         const { error } = await supabase.from(table).upsert({ id: docRef.id, ...payload });
@@ -276,17 +279,17 @@ export const setDoc = async (docRef: any, data: any, options?: { merge: boolean 
 export const updateDoc = async (docRef: any, data: any) => {
     const { table, isGeneric } = getTableConfig(docRef.path);
     if (isGeneric) {
-        const existing = await supabase.from(table).select('data').eq('collection_path', docRef.path).eq('doc_id', docRef.id).single();
-        if (existing.data) {
-            const newData = { ...existing.data.data, ...data };
+        const { data: existingData } = await supabase.from(table).select('data').eq('collection_path', docRef.path).eq('doc_id', docRef.id).maybeSingle();
+        if (existingData) {
+            const newData = { ...existingData.data, ...data };
             const { error } = await supabase.from(table).update({ data: newData }).eq('collection_path', docRef.path).eq('doc_id', docRef.id);
             if (error) console.error("updateDoc generic err:", error);
         }
     } else {
-        const existing = await supabase.from(table).select('data').eq('id', docRef.id).single();
+        const { data: existingData } = await supabase.from(table).select('data').eq('id', docRef.id).maybeSingle();
         const payload = prepareRelationalData(table, data);
-        if (existing.data?.data) {
-            payload.data = { ...existing.data.data, ...payload.data };
+        if (existingData?.data) {
+            payload.data = { ...existingData.data, ...payload.data };
         }
         const { error } = await supabase.from(table).update(payload).eq('id', docRef.id);
         if (error) console.error("updateDoc relational err:", error);
@@ -396,6 +399,11 @@ export const signInWithGoogle = async (redirectTo?: string) => {
     });
     if (error) throw error;
     return data;
+};
+
+// Aliases for Firebase compatibility
+export const signInWithPopup = async (authInstance: any, provider: any) => {
+    return signInWithGoogle();
 };
 
 export class GoogleAuthProvider {
