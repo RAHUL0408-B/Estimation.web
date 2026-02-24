@@ -52,13 +52,16 @@ export function useTenantAuth() {
                     if (!tenantData && supabaseUser) {
                         try {
                             const { collection, addDoc, serverTimestamp, setDoc, doc } = await import('@/lib/supabaseWrapper');
+                            const { generateStoreId } = await import('@/lib/firestoreHelpers');
                             const name = supabaseUser.user_metadata?.full_name || email.split('@')[0] || "User";
+                            const businessName = `${name}'s Workspace`;
 
                             // Create their tenant
                             const tenantRef = await addDoc(collection(db, "tenants"), {
                                 ownerUid: supabaseUser.uid,
                                 ownerName: name,
-                                businessName: `${name}'s Workspace`,
+                                businessName: businessName,
+                                storeId: generateStoreId(businessName),
                                 email: email,
                                 mobile: "",
                                 subscription: { plan: 'free', status: 'active', startDate: new Date().toISOString() },
@@ -89,6 +92,19 @@ export function useTenantAuth() {
                     }
 
                     if (tenantData) {
+                        // Backfill storeId if it's completely missing
+                        if (!tenantData.storeId) {
+                            try {
+                                const { updateDoc, doc } = await import('@/lib/supabaseWrapper');
+                                const { generateStoreId } = await import('@/lib/firestoreHelpers');
+                                const newStoreId = generateStoreId(tenantData.businessName || "workspace") + "-" + Math.floor(Math.random() * 1000);
+                                await updateDoc(doc(db, "tenants", tenantData.id), { storeId: newStoreId });
+                                tenantData.storeId = newStoreId;
+                            } catch (e) {
+                                console.error("Failed to backfill storeId:", e);
+                            }
+                        }
+
                         // Cache the result
                         tenantCache[email] = { data: tenantData, timestamp: Date.now() };
                         setTenant(tenantData);
